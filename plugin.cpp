@@ -7,9 +7,9 @@ float duration = 8.0f;
 float remaining = 8.0f;
 
 
+
 class OurEventSink : public RE::BSTEventSink<RE::MenuOpenCloseEvent>,
-                     public RE::BSTEventSink<RE::TESEquipEvent>,
-                     public RE::BSTEventSink<RE::TESTrackedStatsEvent> {
+                     public RE::BSTEventSink<RE::TESEquipEvent>{
     OurEventSink() = default;
     OurEventSink(const OurEventSink&) = delete;
     OurEventSink(OurEventSink&&) = delete;
@@ -33,10 +33,9 @@ public:
         if (!event) return RE::BSEventNotifyControl::kContinue;
         auto obj = RE::TESForm::LookupByID(event->baseObject);
         if (obj && (std::string_view)obj->GetName() == "Iron Lantern") {
-            //auto asd = RE::SkyrimVM::GetSingleton();
-            //logger::info("{}", asd->queuedOnUpdateEvents.size());
-            //auto lmao = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-            //lmao->Update(100000000.0f);
+            auto asd = RE::SkyrimVM::GetSingleton();
+            logger::info("{}", asd->queuedOnUpdateEvents.size());
+            auto lmao = RE::BSScript::Internal::VirtualMachine::GetSingleton();
             //logger::info("{}", asd->queuedOnUpdateEvents.size());
             /*for (auto& i : asd->queuedOnUpdateEvents) {
 				logger::info("updateType: {}", (int)i.get()->updateType);
@@ -52,19 +51,15 @@ public:
 
         return RE::BSEventNotifyControl::kContinue;
     }
-
-    RE::BSEventNotifyControl ProcessEvent(const RE::TESTrackedStatsEvent* event,
-                                          RE::BSTEventSource<RE::TESTrackedStatsEvent>*) {
+    RE::BSEventNotifyControl ProcessEvent(const RE::TESTriggerEvent* event, RE::BSTEventSource<RE::TESTriggerEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
-        logger::info("{} {} {}", event->stat, event->value, event->pad0C);
-        // SKSE::Impl::EventFilter<std::string>::RegistrationMap<bool,RE::TESGlobal> asd;
-
-
 
         return RE::BSEventNotifyControl::kContinue;
     }
 
 };
+
+
 
 void OnMessage(SKSE::MessagingInterface::Message* message) {
     switch (message->type) {
@@ -75,12 +70,12 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
                 ui = RE::UI::GetSingleton();
                 ui->AddEventSink<RE::MenuOpenCloseEvent>(OurEventSink::GetSingleton());
                 RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
-                RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESTrackedStatsEvent>(OurEventSink::GetSingleton());
                 PostPostLoaded = true;
             }
             break;
     }
 };
+
 
 SKSEPluginLoad(const SKSE::LoadInterface *skse) {
 
