@@ -57,7 +57,7 @@ public:
                                           RE::BSTEventSource<RE::TESTrackedStatsEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
         logger::info("{} {} {}", event->stat, event->value, event->pad0C);
-        SKSE::Impl::EventFilter<std::string>::RegistrationMap<bool,RE::TESGlobal> asd;
+        // SKSE::Impl::EventFilter<std::string>::RegistrationMap<bool,RE::TESGlobal> asd;
 
 
 
