@@ -1,19 +1,16 @@
 #include "Ticker.h"
 #include "logger.h"
 
-float duration = 8.0f;
+float duration = 1.0f;
 
 
 void WorldChecks::UpdateLoop(float start_h) {
     // dostuff
-    logger::info("Time is ticking...");
-
-    float curHours = RE::Calendar::GetSingleton()->GetHoursPassed();
-    logger::info("Current hours: {}", curHours);
-    logger::info("Pi: {}", start_h);
+    logger::info("Time is ticking...");;
+    logger::info("Remaining hours: {}", duration - RE::Calendar::GetSingleton()->GetHoursPassed() + start_h);
 };
 
-class OurEventSink : public RE::BSTEventSink<RE::TESEquipEvent>, public RE::BSTEventSink<RE::TESMagicEffectApplyEvent> {
+class OurEventSink :public RE::BSTEventSink<RE::TESMagicEffectApplyEvent> {
     OurEventSink() = default;
     OurEventSink(const OurEventSink&) = delete;
     OurEventSink(OurEventSink&&) = delete;
@@ -25,23 +22,10 @@ public:
         static OurEventSink singleton;
         return &singleton;
     }
-
-
-    RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* event, RE::BSTEventSource<RE::TESEquipEvent>*) {
-        if (!event) return RE::BSEventNotifyControl::kContinue;
-        auto obj = RE::TESForm::LookupByID(event->baseObject);
-        if (obj && (std::string_view)obj->GetName() == "Iron Lantern") {
-            if (event->equipped) logger::info("Iron Lantern equipped");
-            else logger::info("Iron Lantern unequipped");
-        }
-        if (gameIsPaused) logger::info("asdasd");
-
-
-        return RE::BSEventNotifyControl::kContinue;
-    }
     
     RE::BSEventNotifyControl ProcessEvent(const RE::TESMagicEffectApplyEvent* event, RE::BSTEventSource<RE::TESMagicEffectApplyEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
+        logger::info("Magic effect event.");
         auto mgeff = RE::TESForm::LookupByID<RE::EffectSetting>(event->magicEffect);
         if ((std::string_view)mgeff->GetName() == "Lantern Light") {
             auto timer = WorldChecks::UpdateTicker::GetSingleton();
@@ -59,11 +43,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
         case SKSE::MessagingInterface::kInputLoaded:
             break;
         case SKSE::MessagingInterface::kPostPostLoad:
-            auto* eventSink = OurEventSink::GetSingleton();
-            //ui->AddEventSink<RE::MenuOpenCloseEvent>(eventSink);
-            auto* eventSourceHolder = RE::ScriptEventSourceHolder::GetSingleton();
-            eventSourceHolder->AddEventSink<RE::TESEquipEvent>(eventSink);
-            eventSourceHolder->AddEventSink<RE::TESMagicEffectApplyEvent>(eventSink);
+            RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESMagicEffectApplyEvent>(OurEventSink::GetSingleton());
             break;
     }
 };
