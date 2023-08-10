@@ -1,4 +1,4 @@
-#include "logger.h"
+#include "Ticker.h"
 
 bool PostPostLoaded = false;
 RE::UI* ui = nullptr;
@@ -6,10 +6,7 @@ bool gameIsPaused = false;
 float duration = 8.0f;
 float remaining = 8.0f;
 
-
-
-class OurEventSink : public RE::BSTEventSink<RE::MenuOpenCloseEvent>,
-                     public RE::BSTEventSink<RE::TESEquipEvent>{
+class OurEventSink : public RE::BSTEventSink<RE::TESEquipEvent>, public RE::BSTEventSink<RE::TESMagicEffectApplyEvent> {
     OurEventSink() = default;
     OurEventSink(const OurEventSink&) = delete;
     OurEventSink(OurEventSink&&) = delete;
@@ -22,43 +19,31 @@ public:
         return &singleton;
     }
 
-    RE::BSEventNotifyControl ProcessEvent(const RE::MenuOpenCloseEvent* event,
-                                          RE::BSTEventSource<RE::MenuOpenCloseEvent>*) {
-        if (!event) return RE::BSEventNotifyControl::kContinue;
-        
-        return RE::BSEventNotifyControl::kContinue;
-    }
 
     RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* event, RE::BSTEventSource<RE::TESEquipEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
         auto obj = RE::TESForm::LookupByID(event->baseObject);
         if (obj && (std::string_view)obj->GetName() == "Iron Lantern") {
-            auto asd = RE::SkyrimVM::GetSingleton();
-            logger::info("{}", asd->queuedOnUpdateEvents.size());
-            auto lmao = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-            //logger::info("{}", asd->queuedOnUpdateEvents.size());
-            /*for (auto& i : asd->queuedOnUpdateEvents) {
-				logger::info("updateType: {}", (int)i.get()->updateType);
-                logger::info("timeToSendEvent: {}", i.get()->timeToSendEvent);
-                logger::info("updateTime: {}", i.get()->updateTime);
-                logger::info("handle: {}", (int)i.get()->handle);
-			}*/
-            //gameIsPaused = true;
-            
+            logger::info("Iron Lantern equipped");
         }
         if (gameIsPaused) logger::info("asdasd");
 
 
         return RE::BSEventNotifyControl::kContinue;
     }
-    RE::BSEventNotifyControl ProcessEvent(const RE::TESTriggerEvent* event, RE::BSTEventSource<RE::TESTriggerEvent>*) {
+    
+    RE::BSEventNotifyControl ProcessEvent(const RE::TESMagicEffectApplyEvent* event, RE::BSTEventSource<RE::TESMagicEffectApplyEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
-
+        logger::info("Magic effect applied");
+        auto mgeff = RE::TESForm::LookupByID<RE::EffectSetting>(event->magicEffect);
+        if ((std::string_view)mgeff->GetName() == "Lantern Light") {
+            auto timer = WorldChecks::UpdateTicker::GetSingleton();
+        }
+        
         return RE::BSEventNotifyControl::kContinue;
     }
 
 };
-
 
 
 void OnMessage(SKSE::MessagingInterface::Message* message) {
@@ -68,8 +53,11 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
         case SKSE::MessagingInterface::kPostPostLoad:
             if (!PostPostLoaded) {
                 ui = RE::UI::GetSingleton();
-                ui->AddEventSink<RE::MenuOpenCloseEvent>(OurEventSink::GetSingleton());
-                RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
+                auto* eventSink = OurEventSink::GetSingleton();
+                //ui->AddEventSink<RE::MenuOpenCloseEvent>(eventSink);
+                auto* eventSourceHolder = RE::ScriptEventSourceHolder::GetSingleton();
+                eventSourceHolder->AddEventSink<RE::TESEquipEvent>(eventSink);
+                eventSourceHolder->AddEventSink<RE::TESMagicEffectApplyEvent>(eventSink);
                 PostPostLoaded = true;
             }
             break;
@@ -83,5 +71,6 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
+
     return true;
 }
