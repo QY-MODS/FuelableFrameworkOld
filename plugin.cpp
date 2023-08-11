@@ -1,18 +1,24 @@
 #include "Ticker.h"
 #include "logger.h"
 
-float duration = 1.0f;
+float duration = 0.025f;
+auto timer = WorldChecks::UpdateTicker::GetSingleton();
 
 
 void WorldChecks::UpdateLoop(float start_h, RE::EffectSetting* _mgeff) {
-    // dostuff
     logger::info("Time is ticking...");
-    logger::info("Remaining hours: {}", duration - RE::Calendar::GetSingleton()->GetHoursPassed() + start_h);
+    auto remaining = duration - RE::Calendar::GetSingleton()->GetHoursPassed() + start_h;
+    logger::info("Remaining hours: {}", remaining);
     auto plyr = RE::PlayerCharacter::GetSingleton()->AsMagicTarget();
-    if (!plyr) logger::info("Player is not a magic target.");
-    
-    if (plyr->HasMagicEffect(_mgeff)) logger::info("Player has magic effect.");
-	else logger::info("Player does not have magic effect.");
+    if (!plyr) {
+        logger::info("Player is not a magic target.");
+    }
+    else {
+        if (remaining <= 0.001 && plyr->HasMagicEffect(_mgeff)) {
+            timer->Stop();
+            logger::info("timer stopped.");
+        }
+    }
 };
 
 class OurEventSink :public RE::BSTEventSink<RE::TESMagicEffectApplyEvent> {
@@ -33,7 +39,6 @@ public:
         logger::info("Magic effect event.");
         auto mgeff = RE::TESForm::LookupByID<RE::EffectSetting>(event->magicEffect);
         if (mgeff && (std::string_view) mgeff->GetName() == "Lantern Light") {
-            auto timer = WorldChecks::UpdateTicker::GetSingleton();
             timer->Start(RE::Calendar::GetSingleton()->GetHoursPassed(),mgeff);
         }
         

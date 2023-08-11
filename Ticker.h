@@ -81,7 +81,5 @@ namespace WorldChecks {
             static UpdateTicker singleton(std::chrono::milliseconds(5000));
             return &singleton;
         }
-
-        float LastUpdatePollGameTime = RE::Calendar::GetSingleton()->GetHoursPassed();
     };
 }
