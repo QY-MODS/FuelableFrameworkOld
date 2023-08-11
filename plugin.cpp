@@ -1,5 +1,6 @@
 #include "Ticker.h"
-#include "logger.h"
+//#include "logger.h"
+#include "Settings.h"
 
 std::uint32_t formid;
 auto timer = WorldChecks::UpdateTicker::GetSingleton();
@@ -76,6 +77,8 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
+    auto sources = Settings::LoadSettings();
+    logger::info("Loaded {} sources.", sources.size());
 
     return true;
 }
