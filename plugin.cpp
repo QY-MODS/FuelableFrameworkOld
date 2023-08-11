@@ -2,23 +2,23 @@
 //#include "logger.h"
 #include "Settings.h"
 
-std::uint32_t formid;
 auto timer = WorldChecks::UpdateTicker::GetSingleton();
-auto remaining = 0.0f;
-float duration = 0.5f;
+std::vector<Settings::LightSource> sources;
+Settings::LightSource* current_source;
+int initial_fuel_count = 1;
 
 
 void WorldChecks::UpdateLoop(float start_h) {
-    if (remaining > 0.0001) {
-        remaining = duration - RE::Calendar::GetSingleton()->GetHoursPassed() + start_h;
-        logger::info("Remaining hours: {}", remaining);
+    if (current_source->remaining - current_source->elapsed > 0.0001) {
+        current_source->elapsed = RE::Calendar::GetSingleton()->GetHoursPassed() - start_h;
+        logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
     } 
     else {
         auto plyr = RE::PlayerCharacter::GetSingleton();
         if (plyr) {
-            RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, RE::TESForm::LookupByID(formid)->As<RE::TESBoundObject>());
+            RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, RE::TESForm::LookupByID(current_source->formid)->As<RE::TESBoundObject>());
         }
-        remaining = 0.0f;
+        current_source->remaining = 0.0f;
     }
 };
 
@@ -37,22 +37,34 @@ public:
     
     RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* event, RE::BSTEventSource<RE::TESEquipEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
-        if (!formid && (std::string_view)RE::TESForm::LookupByID(event->baseObject)->GetName() == "Iron Lantern") {
-			formid = event->baseObject;
-			logger::info("Lantern formid: {}", formid);
-		}
-        
-        if (event->baseObject == formid) {
-            if (event->equipped) {
-				logger::info("Lantern equipped.");
-                timer->Start(RE::Calendar::GetSingleton()->GetHoursPassed());
-			}
-            else {
-				logger::info("Lantern unequipped.");
-				timer->Stop();
-                logger::info("timer stopped.");
-			}
+        auto item_name = (std::string_view)RE::TESForm::LookupByID(event->baseObject)->GetName();
+        auto is_source = false;
+        for (auto& src : sources) {
+            current_source = &src;
+            if (item_name == current_source->name) {
+                is_source = true;
+                if (initial_fuel_count) {
+                    logger::info("Initial fuel count: {}", initial_fuel_count);
+                    current_source->ReFuel();
+                    initial_fuel_count--;
+                }
+                break;
+            }
         }
+        if (!is_source) return RE::BSEventNotifyControl::kContinue;
+        if (!current_source->formid) current_source->formid = event->baseObject;
+        if (event->equipped) {
+			logger::info("{} equipped.",current_source->name);
+            timer->Start(RE::Calendar::GetSingleton()->GetHoursPassed());
+            logger::info("timer started.");
+		}
+        else {
+            logger::info("{} unequipped.", current_source->name);
+			timer->Stop();
+            current_source->remaining -= current_source->elapsed;
+            current_source->elapsed = 0.0f;
+            logger::info("timer stopped.");
+		}
         return RE::BSEventNotifyControl::kContinue;
     }
 
@@ -64,7 +76,6 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
         case SKSE::MessagingInterface::kInputLoaded:
             break;
         case SKSE::MessagingInterface::kPostPostLoad:
-            remaining = duration;
             RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
             break;
     }
@@ -77,8 +88,7 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-    auto sources = Settings::LoadSettings();
-    logger::info("Loaded {} sources.", sources.size());
+    sources = Settings::LoadSettings();
 
     return true;
 }

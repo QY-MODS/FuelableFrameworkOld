@@ -8,14 +8,22 @@ using KeyValuePair = std::pair<const char*, int>;
 namespace Settings {
     
     constexpr auto path = L"Data/SKSE/Plugins/FuelableFramework.ini";
-    const char* comment = ";Make sure to use unique keys, e.g. Source1=\"Iron Lantern\" Source2=\"Bug Lantern\" ...";
+    const char* comment = ";Make sure to use unique keys, e.g. Source1=Iron Lantern Source2=Bug Lantern ...";
     const char* default_duration = "8";
     
     struct LightSource {
-        std::string_view name;
+        std::string name;
 		float duration;
-		std::string_view fuel;
-        LightSource(std::string_view name, float duration, std::string_view fuel) : name(name), duration(duration), fuel(fuel) {};
+        float remaining = 0.f;
+        float elapsed = 0.f;
+        std::string fuel;
+        LightSource(std::string name, float duration, std::string fuel) : name(name), duration(duration), fuel(fuel){};
+        int formid=0;
+
+        void ReFuel() {
+			remaining = duration;
+			elapsed = 0.f;
+		};
 	};
 
 
@@ -40,7 +48,6 @@ namespace Settings {
                     light_sources.push_back(val);
                 else continue;
                 ini.SetValue("Light Sources", it->pItem, val);
-                logger::info("Light source: {} {}", it->pItem, val);
             }
 		}
        
@@ -60,7 +67,6 @@ namespace Settings {
 					fuel_sources.push_back(val);
 				else continue;
 				ini.SetValue("Fuel Sources", it->pItem, val);
-				logger::info("Fuel source: {} {}", it->pItem, val);
 			}
 		}
 
@@ -81,7 +87,6 @@ namespace Settings {
                     durations.push_back(val);
 				else continue;
 				ini.SetValue("Durations", it->pItem, val);
-				logger::info("Duration: {} {}", it->pItem, val);
 			}
 		}
 
@@ -101,7 +106,7 @@ namespace Settings {
         lightSources.reserve(numSources);
         int index = 0;
         for (auto it1 = light_sources.begin(), it2 = durations.begin(), it3 = fuel_sources.begin(); index<numSources; ++it1, ++it2, ++it3, ++index) {
-            lightSources.emplace_back((std::string_view)it1->pItem, std::strtof(it2->pItem, nullptr), (std::string_view)it3->pItem);
+            lightSources.emplace_back((std::string)it1->pItem, std::stof(it2->pItem), (std::string)it3->pItem);
         }
 
         return lightSources;
