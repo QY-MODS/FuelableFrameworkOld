@@ -8,22 +8,19 @@ using KeyValuePair = std::pair<const char*, int>;
 namespace Settings {
     
     constexpr auto path = L"Data/SKSE/Plugins/FuelableFramework.ini";
+    constexpr auto path2 = L"Data/SKSE/SavedStates.txt";
     const char* comment = ";Make sure to use unique keys, e.g. Source1=Iron Lantern Source2=Bug Lantern ...";
     const char* default_duration = "8";
+    bool verbose = false;
     
     struct LightSource {
-        std::string name;
 		float duration;
         float remaining = 0.f;
         float elapsed = 0.f;
-        std::string fuel;
-        LightSource(std::string name, float duration, std::string fuel) : name(name), duration(duration), fuel(fuel){};
-        int formid=0;
+        std::uint32_t fuel;
+        std::uint32_t formid = 0;
+        LightSource(std::uint32_t formid, float duration, std::uint32_t fuel) : formid(formid), duration(duration), fuel(fuel){};
 
-        void ReFuel() {
-			remaining = duration;
-			elapsed = 0.f;
-		};
 	};
 
 
@@ -98,6 +95,14 @@ namespace Settings {
             }
 		}
 
+        if (!ini.SectionExists("Other Stuff")) {
+            ini.SetValue("Other Stuff", nullptr, nullptr);
+            ini.SetValue("Other Stuff", "In-game messages", verbose ? "true" : "false");
+        } 
+        else {
+            verbose = ini.GetBoolValue("Other Stuff", "In-game messages", verbose);
+        }
+
 
         ini.SaveFile(path);
 
@@ -106,7 +111,8 @@ namespace Settings {
         lightSources.reserve(numSources);
         int index = 0;
         for (auto it1 = light_sources.begin(), it2 = durations.begin(), it3 = fuel_sources.begin(); index<numSources; ++it1, ++it2, ++it3, ++index) {
-            lightSources.emplace_back((std::string)it1->pItem, std::stof(it2->pItem), (std::string)it3->pItem);
+            lightSources.emplace_back(static_cast<uint32_t>(std::strtoul(it1->pItem, nullptr, 16)), std::stof(it2->pItem),
+                                      static_cast<uint32_t>(std::strtoul(it3->pItem, nullptr, 16)));
         }
 
         return lightSources;

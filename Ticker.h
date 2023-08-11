@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <chrono>
+#include "Settings.h"
 
 
 namespace Utilities
@@ -69,17 +70,85 @@ namespace Utilities
 
 }
 
-namespace WorldChecks {
 
-    void UpdateLoop(float start_h);
+class LightSourceManager : public Utilities::Ticker {
+	void UpdateLoop(float start_h) {
+		if (HasFuel(current_source)) {
+            UpdateElapsed(start_h);
+			logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
+        } else NoFuel();
+	};
 
-    class UpdateTicker : public Utilities::Ticker {
-    public:
-        UpdateTicker(std::chrono::milliseconds interval) : Utilities::Ticker(std::function<void(float)>(UpdateLoop), interval) {}
+	void UpdateElapsed(float start) { 
+		current_source->elapsed = RE::Calendar::GetSingleton()->GetHoursPassed() - start;
+	};
 
-        static UpdateTicker* GetSingleton() {
-            static UpdateTicker singleton(std::chrono::milliseconds(500));
-            return &singleton;
+	void NoFuel(){
+		auto plyr = RE::PlayerCharacter::GetSingleton();
+        if (plyr) {
+			auto fuel_item = GetBoundObject(current_source->fuel);
+            if (plyr->GetItemCount(fuel_item) > 0) {
+                plyr->RemoveItem(fuel_item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+				ReFuel();
+				logger::info("Refueled.");
+			} else {
+				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject(current_source->formid));
+                RE::DebugNotification(std::format("My {} needs {} for fuel.", GetName(current_source->formid), GetName(current_source->fuel)).c_str());
+				logger::info("No fuel.");
+			}
         }
+	}
+
+public:
+    LightSourceManager(std::vector<Settings::LightSource>& data, std::chrono::milliseconds interval)
+        : sources(data), Utilities::Ticker([this](float start_h) { UpdateLoop(start_h); }, interval){
+			/*for (auto& src : sources) {
+				logger::info("Name: {}, Fuel Name: {} duration {}", GetName(src.formid), GetName(src.fuel), src.duration);
+			}*/
+	};
+
+    static LightSourceManager* GetSingleton(std::vector<Settings::LightSource>& data, int u_intervall) {
+        static LightSourceManager singleton(data,std::chrono::milliseconds(u_intervall));
+        return &singleton;
+    }
+
+	std::vector<Settings::LightSource> sources;
+    Settings::LightSource* current_source = nullptr;
+
+	void ReFuel() {
+        current_source->remaining = current_source->duration;
+        current_source->elapsed = 0.f;
     };
-}
+
+	void StartBurn() { 
+		Start(RE::Calendar::GetSingleton()->GetHoursPassed());
+        //logger::info("Started to burn fuel.");
+	};
+
+	void StopBurn() {
+        Stop();
+		current_source->remaining -= current_source->elapsed;
+		current_source->elapsed = 0.f;
+        //logger::info("Stopped burning fuel.");
+    };
+
+	bool HasFuel(Settings::LightSource* src) { return GetRemaining(src) > 0.0001;};
+
+	float GetRemaining(Settings::LightSource* src) { return src->remaining - src->elapsed; };
+
+	bool SetSource(RE::FormID eqp_obj) {
+        for (auto& src : sources) {
+            current_source = &src;
+            if (eqp_obj == current_source->formid) return true;
+        }
+        current_source = nullptr;
+		return false;
+	};
+
+	RE::TESBoundObject* GetBoundObject(RE::FormID fid) { return RE::TESForm::LookupByID(fid)->As<RE::TESBoundObject>(); }
+
+    std::string_view GetName(RE::FormID fid) { return RE::TESForm::LookupByID(fid)->GetName(); }
+
+	//void SaveState();
+
+};

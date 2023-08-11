@@ -2,25 +2,7 @@
 //#include "logger.h"
 #include "Settings.h"
 
-auto timer = WorldChecks::UpdateTicker::GetSingleton();
-std::vector<Settings::LightSource> sources;
-Settings::LightSource* current_source;
-int initial_fuel_count = 1;
-
-
-void WorldChecks::UpdateLoop(float start_h) {
-    if (current_source->remaining - current_source->elapsed > 0.0001) {
-        current_source->elapsed = RE::Calendar::GetSingleton()->GetHoursPassed() - start_h;
-        logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
-    } 
-    else {
-        auto plyr = RE::PlayerCharacter::GetSingleton();
-        if (plyr) {
-            RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, RE::TESForm::LookupByID(current_source->formid)->As<RE::TESBoundObject>());
-        }
-        current_source->remaining = 0.0f;
-    }
-};
+LightSourceManager* LSM;
 
 class OurEventSink : public RE::BSTEventSink<RE::TESEquipEvent> {
     OurEventSink() = default;
@@ -37,39 +19,21 @@ public:
     
     RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* event, RE::BSTEventSource<RE::TESEquipEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
-        auto item_name = (std::string_view)RE::TESForm::LookupByID(event->baseObject)->GetName();
-        auto is_source = false;
-        for (auto& src : sources) {
-            current_source = &src;
-            if (item_name == current_source->name) {
-                is_source = true;
-                if (initial_fuel_count) {
-                    logger::info("Initial fuel count: {}", initial_fuel_count);
-                    current_source->ReFuel();
-                    initial_fuel_count--;
-                }
-                break;
-            }
-        }
-        if (!is_source) return RE::BSEventNotifyControl::kContinue;
-        if (!current_source->formid) current_source->formid = event->baseObject;
+        if (!LSM->SetSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
-			logger::info("{} equipped.",current_source->name);
-            timer->Start(RE::Calendar::GetSingleton()->GetHoursPassed());
-            logger::info("timer started.");
+            logger::info("{} equipped.", LSM->GetName(LSM->current_source->formid));
+            LSM->StartBurn();
 		}
         else {
-            logger::info("{} unequipped.", current_source->name);
-			timer->Stop();
-            current_source->remaining -= current_source->elapsed;
-            current_source->elapsed = 0.0f;
+            logger::info("{} unequipped.", LSM->GetName(LSM->current_source->formid));
+			LSM->StopBurn();
             logger::info("timer stopped.");
 		}
         return RE::BSEventNotifyControl::kContinue;
     }
 
-};
 
+};
 
 void OnMessage(SKSE::MessagingInterface::Message* message) {
     switch (message->type) {
@@ -88,7 +52,8 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-    sources = Settings::LoadSettings();
+    auto sources = Settings::LoadSettings();
+    LSM = LightSourceManager::GetSingleton(sources, 500);
 
     return true;
 }
