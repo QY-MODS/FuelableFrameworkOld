@@ -10,7 +10,7 @@ namespace Utilities
 	class Ticker
 	{
 	public:
-        Ticker(std::function<void(float, RE::EffectSetting*)> onTick, std::chrono::milliseconds interval)
+        Ticker(std::function<void(float)> onTick, std::chrono::milliseconds interval)
             :
 			m_OnTick(onTick),
 			m_Interval(interval),
@@ -18,7 +18,7 @@ namespace Utilities
 			m_ThreadActive(false)
 		{}
 
-		void Start(float start_time, RE::EffectSetting* me)
+		void Start(float start_time)
 		{
 			if (m_Running) {
 				return;
@@ -26,7 +26,7 @@ namespace Utilities
 			m_Running = true;
 			//logger::info("Start Called with thread active state of: {}", m_ThreadActive);
 			if (!m_ThreadActive) {
-				std::thread tickerThread(&Ticker::RunLoop, this, start_time, me);
+				std::thread tickerThread(&Ticker::RunLoop, this, start_time);
 				tickerThread.detach();
 			}
 		}
@@ -44,11 +44,11 @@ namespace Utilities
 		}
 
 	private:
-        void RunLoop(float start_t, RE::EffectSetting* magic_e)
+        void RunLoop(float start_t)
 		{
 			m_ThreadActive = true;
 			while (m_Running) {
-                std::thread runnerThread(m_OnTick, start_t, magic_e);
+                std::thread runnerThread(m_OnTick, start_t);
 				runnerThread.detach();
 
 				m_IntervalMutex.lock();
@@ -59,7 +59,7 @@ namespace Utilities
 			m_ThreadActive = false;
 		}
 
-		std::function<void(float, RE::EffectSetting*)> m_OnTick;
+		std::function<void(float)> m_OnTick;
 		std::chrono::milliseconds m_Interval;
 
 		std::atomic<bool> m_ThreadActive;
@@ -71,14 +71,14 @@ namespace Utilities
 
 namespace WorldChecks {
 
-    void UpdateLoop(float start_h, RE::EffectSetting* me);
+    void UpdateLoop(float start_h);
 
     class UpdateTicker : public Utilities::Ticker {
     public:
-        UpdateTicker(std::chrono::milliseconds interval) : Utilities::Ticker(std::function<void(float, RE::EffectSetting*)>(UpdateLoop), interval) {}
+        UpdateTicker(std::chrono::milliseconds interval) : Utilities::Ticker(std::function<void(float)>(UpdateLoop), interval) {}
 
         static UpdateTicker* GetSingleton() {
-            static UpdateTicker singleton(std::chrono::milliseconds(5000));
+            static UpdateTicker singleton(std::chrono::milliseconds(500));
             return &singleton;
         }
     };

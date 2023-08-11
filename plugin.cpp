@@ -1,27 +1,27 @@
 #include "Ticker.h"
 #include "logger.h"
 
-float duration = 0.025f;
+std::uint32_t formid;
 auto timer = WorldChecks::UpdateTicker::GetSingleton();
+auto remaining = 0.0f;
+float duration = 0.5f;
 
 
-void WorldChecks::UpdateLoop(float start_h, RE::EffectSetting* _mgeff) {
-    logger::info("Time is ticking...");
-    auto remaining = duration - RE::Calendar::GetSingleton()->GetHoursPassed() + start_h;
-    logger::info("Remaining hours: {}", remaining);
-    auto plyr = RE::PlayerCharacter::GetSingleton()->AsMagicTarget();
-    if (!plyr) {
-        logger::info("Player is not a magic target.");
-    }
+void WorldChecks::UpdateLoop(float start_h) {
+    if (remaining > 0.0001) {
+        remaining = duration - RE::Calendar::GetSingleton()->GetHoursPassed() + start_h;
+        logger::info("Remaining hours: {}", remaining);
+    } 
     else {
-        if (remaining <= 0.001 && plyr->HasMagicEffect(_mgeff)) {
-            timer->Stop();
-            logger::info("timer stopped.");
+        auto plyr = RE::PlayerCharacter::GetSingleton();
+        if (plyr) {
+            RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, RE::TESForm::LookupByID(formid)->As<RE::TESBoundObject>());
         }
+        remaining = 0.0f;
     }
 };
 
-class OurEventSink :public RE::BSTEventSink<RE::TESMagicEffectApplyEvent> {
+class OurEventSink : public RE::BSTEventSink<RE::TESEquipEvent> {
     OurEventSink() = default;
     OurEventSink(const OurEventSink&) = delete;
     OurEventSink(OurEventSink&&) = delete;
@@ -34,14 +34,24 @@ public:
         return &singleton;
     }
     
-    RE::BSEventNotifyControl ProcessEvent(const RE::TESMagicEffectApplyEvent* event, RE::BSTEventSource<RE::TESMagicEffectApplyEvent>*) {
+    RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* event, RE::BSTEventSource<RE::TESEquipEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
-        logger::info("Magic effect event.");
-        auto mgeff = RE::TESForm::LookupByID<RE::EffectSetting>(event->magicEffect);
-        if (mgeff && (std::string_view) mgeff->GetName() == "Lantern Light") {
-            timer->Start(RE::Calendar::GetSingleton()->GetHoursPassed(),mgeff);
-        }
+        if (!formid && (std::string_view)RE::TESForm::LookupByID(event->baseObject)->GetName() == "Iron Lantern") {
+			formid = event->baseObject;
+			logger::info("Lantern formid: {}", formid);
+		}
         
+        if (event->baseObject == formid) {
+            if (event->equipped) {
+				logger::info("Lantern equipped.");
+                timer->Start(RE::Calendar::GetSingleton()->GetHoursPassed());
+			}
+            else {
+				logger::info("Lantern unequipped.");
+				timer->Stop();
+                logger::info("timer stopped.");
+			}
+        }
         return RE::BSEventNotifyControl::kContinue;
     }
 
@@ -53,7 +63,8 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
         case SKSE::MessagingInterface::kInputLoaded:
             break;
         case SKSE::MessagingInterface::kPostPostLoad:
-            RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESMagicEffectApplyEvent>(OurEventSink::GetSingleton());
+            remaining = duration;
+            RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
             break;
     }
 };
