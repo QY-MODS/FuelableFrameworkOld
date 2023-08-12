@@ -1,25 +1,30 @@
 #pragma once
 #include "SimpleIni.h"
-#include "logger.h"
 
-// keyboard-gp & mouse-gp
-using KeyValuePair = std::pair<const char*, int>;
 
 namespace Settings {
     
     constexpr auto path = L"Data/SKSE/Plugins/FuelableFramework.ini";
     constexpr auto path2 = L"Data/SKSE/SavedStates.txt";
-    const char* comment = ";Make sure to use unique keys, e.g. Source1=Iron Lantern Source2=Bug Lantern ...";
+    const char* comment = ";Make sure to use unique keys, e.g. Source1=000f11c0 Source2=05002301 ...";
     const char* default_duration = "8";
     bool verbose = false;
+    constexpr std::uint32_t kSerializationVersion = 1;
+    constexpr std::uint32_t kDataKey = 'FUEL';
     
     struct LightSource {
 		float duration;
+        std::uint32_t fuel;
+        std::uint32_t formid;
+        LightSource(std::uint32_t formid, float duration, std::uint32_t fuel) : formid(formid), duration(duration), fuel(fuel){};
+
         float remaining = 0.f;
         float elapsed = 0.f;
-        std::uint32_t fuel;
-        std::uint32_t formid = 0;
-        LightSource(std::uint32_t formid, float duration, std::uint32_t fuel) : formid(formid), duration(duration), fuel(fuel){};
+        
+        std::string_view GetName() { return RE::TESForm::LookupByID(formid)->GetName(); };
+        std::string_view GetFuelName() { return RE::TESForm::LookupByID(fuel)->GetName(); };
+        RE::TESBoundObject* GetBoundObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(formid);};
+        RE::TESBoundObject* GetBoundFuelObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(fuel); };
 
 	};
 
@@ -117,6 +122,9 @@ namespace Settings {
 
         return lightSources;
     };
+
+
+
 
 
 
