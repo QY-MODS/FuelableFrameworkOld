@@ -4,6 +4,9 @@
 #include <functional>
 #include <chrono>
 #include "Settings.h"
+//#include "lsstate.pb.h"
+#include "addressbook.pb.h"
+
 
 
 namespace Utilities
@@ -72,6 +75,9 @@ namespace Utilities
 
 
 class LightSourceManager : public Utilities::Ticker {
+
+	bool is_burning = false;
+
 	void UpdateLoop(float start_h) {
 		if (HasFuel(current_source)) {
             UpdateElapsed(start_h);
@@ -99,6 +105,7 @@ class LightSourceManager : public Utilities::Ticker {
         }
 	}
 
+
 public:
     LightSourceManager(std::vector<Settings::LightSource>& data, std::chrono::milliseconds interval)
         : sources(data), Utilities::Ticker([this](float start_h) { UpdateLoop(start_h); }, interval){
@@ -122,6 +129,7 @@ public:
 
 	void StartBurn() { 
 		Start(RE::Calendar::GetSingleton()->GetHoursPassed());
+        is_burning = true;
         //logger::info("Started to burn fuel.");
 	};
 
@@ -129,6 +137,7 @@ public:
         Stop();
 		current_source->remaining -= current_source->elapsed;
 		current_source->elapsed = 0.f;
+        is_burning = false;
         //logger::info("Stopped burning fuel.");
     };
 
@@ -149,6 +158,15 @@ public:
 
     std::string_view GetName(RE::FormID fid) { return RE::TESForm::LookupByID(fid)->GetName(); }
 
-	//void SaveState();
+	void SaveCurrentState() { 
+		if (is_burning) {
+			StopBurn();
+			is_burning = true;
+        }
 
+ 
+        if (is_burning) StartBurn();
+
+	}
 };
+	
