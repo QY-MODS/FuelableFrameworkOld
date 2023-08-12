@@ -39,10 +39,16 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
     switch (message->type) {
         case SKSE::MessagingInterface::kPostPostLoad:
             logger::info("Postpostload.");
+            LSM->LogRemainings();
             RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
             break;
         case SKSE::MessagingInterface::kNewGame:
             logger::info("Newgame.");
+            if (LSM->sources.empty()) {
+                logger::info("No sources found.");
+                RE::DebugMessageBox(Settings::no_src_msgbox.c_str());
+                return;
+            }
             LSM->Reset();
             logger::info("Newgame LSM reset succesful.");
             break;
@@ -54,6 +60,11 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
         case SKSE::MessagingInterface::kPostLoadGame:
             logger::info("Postload.");
             LSM->LogRemainings();
+            if (LSM->sources.empty()) {
+                logger::info("No sources found.");
+                RE::DebugMessageBox(Settings::no_src_msgbox.c_str());
+                return;
+            } else LSM->LogRemainings();
             if (!LSM->DetectSetSource()) logger::info("No source detected, i.e. player wasnt wearing any source.");
             logger::info("Postload LSM succesful.");
 			break;
@@ -117,14 +128,31 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     SetupLog();
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
-    //logger::info("Loading Settings...");
-    auto sources = Settings::LoadSettings();
-    //logger::info("Loading LSM...");
+    logger::info("Loading Settings...");
+     auto sources = Settings::LoadSettings();
+    logger::info("Loading LSM...");
     LSM = LightSourceManager::GetSingleton(sources, 500);
     /*for (auto& src : LSM->sources) {
         logger::info("{} has max duration of {}, which can be fueled by {}.", src.GetName(), src.duration, src.GetFuelName());
 	}*/
+    //Settings::INISettings* ini_settings = Settings::INISettings::GetSingleton();
+    
+     //LSM = LightSourceManager::GetSingleton(Settings::INISettings::GetSingleton()->sources, 500);
+    //LSM->LogRemainings();
+    /*auto sources = Settings::LoadINISettings();
+    LSM = LightSourceManager::GetSingleton(sources, 500);*/
+
+    /*for (auto& src : ini_settings->sources) {
+        logger::info("asd");
+		logger::info("{} has max duration of {}, which can be fueled by {}.", src.GetName(), src.duration, src.GetFuelName());
+	}*/
+    /*auto asd = Settings::INISettings::GetSingleton()->sources;
+    logger::info("{}", asd.size());
+    for (auto& src : asd) {
+        logger::info("{}", src.formid);
+    }*/
     InitializeSerialization();
+
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
 
     return true;
