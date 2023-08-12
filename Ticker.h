@@ -4,8 +4,6 @@
 #include <functional>
 #include <chrono>
 #include "Settings.h"
-//#include "lsstate.pb.h"
-#include "addressbook.pb.h"
 
 
 
