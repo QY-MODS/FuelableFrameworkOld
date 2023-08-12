@@ -2,9 +2,6 @@
 #include "SimpleIni.h"
 #include "logger.h"
 
-// keyboard-gp & mouse-gp
-using KeyValuePair = std::pair<const char*, int>;
-
 namespace Settings {
     
     constexpr auto path = L"Data/SKSE/Plugins/FuelableFramework.ini";
