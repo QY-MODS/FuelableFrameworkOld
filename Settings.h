@@ -1,6 +1,6 @@
 #pragma once
 #include "SimpleIni.h"
-#include "logger.h"
+
 
 namespace Settings {
     
@@ -9,6 +9,8 @@ namespace Settings {
     const char* comment = ";Make sure to use unique keys, e.g. Source1=000f11c0 Source2=05002301 ...";
     const char* default_duration = "8";
     bool verbose = false;
+    constexpr std::uint32_t kSerializationVersion = 1;
+    constexpr std::uint32_t kDataKey = 'FUEL';
     
     struct LightSource {
 		float duration;
@@ -121,22 +123,6 @@ namespace Settings {
         return lightSources;
     };
 
-    void gameSavedHandler(SKSE::SerializationInterface* intfc) {
-		logger::info("Saving cosave data...");
-	};
-
-    void gameLoadedHandler(SKSE::SerializationInterface* intfc) {
-        logger::info("Loading cosave data...");
-	};
-
-    void initializeCosaves() {
-        logger::info("Initializing cosave serialization...");
-        auto* s_intfc = SKSE::GetSerializationInterface();
-        s_intfc->SetUniqueID(_byteswap_ulong('FUEL'));
-        s_intfc->SetSaveCallback(gameSavedHandler);
-        // cosave->SetRevertCallback(cosave::revertHandler);
-        s_intfc->SetLoadCallback(gameLoadedHandler);
-    }
 
 
 
