@@ -107,9 +107,9 @@ class LightSourceManager : public Utilities::Ticker {
 public:
     LightSourceManager(std::vector<Settings::LightSource>& data, std::chrono::milliseconds interval)
         : sources(data), Utilities::Ticker([this](float start_h) { UpdateLoop(start_h); }, interval){
-			/*for (auto& src : sources) {
-				logger::info("Name: {}, Fuel Name: {} duration {}", GetName(src.formid), GetName(src.fuel), src.duration);
-			}*/
+			//for (auto& src : sources) {
+				//logger::info("Name: {}, Fuel Name: {} duration {}", GetName(src.formid), GetName(src.fuel), src.duration);
+			//}
 	};
 
     static LightSourceManager* GetSingleton(std::vector<Settings::LightSource>& data, int u_intervall) {
@@ -152,8 +152,8 @@ public:
 		return false;
 	};
 
-    std::string_view GetName() { return current_source->name; };
-    std::string_view GetFuelName() { return current_source->fuel_name; };
+    std::string_view GetName() { return current_source->GetName(); };
+    std::string_view GetFuelName() { return current_source->GetFuelName(); };
     RE::TESBoundObject* GetBoundObject() { return current_source->GetBoundObject(); };
     RE::TESBoundObject* GetBoundFuelObject() { return current_source->GetBoundFuelObject(); };
 

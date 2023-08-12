@@ -40,6 +40,8 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
         case SKSE::MessagingInterface::kInputLoaded:
             break;
         case SKSE::MessagingInterface::kPostPostLoad:
+            auto sources = Settings::LoadSettings();
+            LSM = LightSourceManager::GetSingleton(sources, 500);
             RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
             break;
     }
@@ -52,9 +54,7 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-    auto sources = Settings::LoadSettings();
-    LSM = LightSourceManager::GetSingleton(sources, 500);
-    //Settings::initializeCosaves();
+    Settings::initializeCosaves();
 
     return true;
 }
