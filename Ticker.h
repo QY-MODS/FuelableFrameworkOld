@@ -90,14 +90,14 @@ class LightSourceManager : public Utilities::Ticker {
 	void NoFuel(){
 		auto plyr = RE::PlayerCharacter::GetSingleton();
         if (plyr) {
-			auto fuel_item = GetBoundObject(current_source->fuel);
+			auto fuel_item = GetBoundFuelObject();
             if (plyr->GetItemCount(fuel_item) > 0) {
                 plyr->RemoveItem(fuel_item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 				ReFuel();
 				logger::info("Refueled.");
 			} else {
-				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject(current_source->formid));
-                RE::DebugNotification(std::format("My {} needs {} for fuel.", GetName(current_source->formid), GetName(current_source->fuel)).c_str());
+				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject());
+                RE::DebugNotification(std::format("My {} needs {} for fuel.", GetName(), GetFuelName()).c_str());
 				logger::info("No fuel.");
 			}
         }
@@ -152,9 +152,10 @@ public:
 		return false;
 	};
 
-	RE::TESBoundObject* GetBoundObject(RE::FormID fid) { return RE::TESForm::LookupByID(fid)->As<RE::TESBoundObject>(); }
-
-    std::string_view GetName(RE::FormID fid) { return RE::TESForm::LookupByID(fid)->GetName(); }
+    std::string_view GetName() { return current_source->name; };
+    std::string_view GetFuelName() { return current_source->fuel_name; };
+    RE::TESBoundObject* GetBoundObject() { return current_source->GetBoundObject(); };
+    RE::TESBoundObject* GetBoundFuelObject() { return current_source->GetBoundFuelObject(); };
 
 	void SaveCurrentState() { 
 		if (is_burning) {

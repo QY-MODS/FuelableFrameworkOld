@@ -21,11 +21,11 @@ public:
         if (!event) return RE::BSEventNotifyControl::kContinue;
         if (!LSM->SetSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
-            logger::info("{} equipped.", LSM->GetName(LSM->current_source->formid));
+            logger::info("{} equipped.", LSM->GetName());
             LSM->StartBurn();
 		}
         else {
-            logger::info("{} unequipped.", LSM->GetName(LSM->current_source->formid));
+            logger::info("{} unequipped.", LSM->GetName());
 			LSM->StopBurn();
             logger::info("timer stopped.");
 		}
@@ -54,6 +54,7 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
     auto sources = Settings::LoadSettings();
     LSM = LightSourceManager::GetSingleton(sources, 500);
+    //Settings::initializeCosaves();
 
     return true;
 }

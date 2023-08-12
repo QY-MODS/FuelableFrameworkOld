@@ -15,11 +15,19 @@ namespace Settings {
     
     struct LightSource {
 		float duration;
-        float remaining = 0.f;
-        float elapsed = 0.f;
         std::uint32_t fuel;
         std::uint32_t formid = 0;
-        LightSource(std::uint32_t formid, float duration, std::uint32_t fuel) : formid(formid), duration(duration), fuel(fuel){};
+        LightSource(std::uint32_t formid, float duration, std::uint32_t fuel) : formid(formid), duration(duration), fuel(fuel){
+            name = RE::TESForm::LookupByID(formid)->GetName();
+            fuel_name = RE::TESForm::LookupByID(fuel)->GetName();
+        };
+
+        float remaining = 0.f;
+        float elapsed = 0.f;
+        std::string_view name;
+        std::string_view fuel_name;
+        RE::TESBoundObject* GetBoundObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(formid);};
+        RE::TESBoundObject* GetBoundFuelObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(fuel); };
 
 	};
 
@@ -117,6 +125,25 @@ namespace Settings {
 
         return lightSources;
     };
+
+ //   void gameSavedHandler(SKSE::SerializationInterface* intfc) {
+	//	logger::info("Saving cosave data...");
+	//};
+
+ //   void gameLoadedHandler(SKSE::SerializationInterface* intfc) {
+ //       logger::info("Loading cosave data...");
+	//};
+
+ //   void initializeCosaves() {
+ //       logger::info("Initializing cosave serialization...");
+ //       auto* s_intfc = SKSE::GetSerializationInterface();
+ //       s_intfc->SetUniqueID(_byteswap_ulong('FUEL'));
+ //       s_intfc->SetSaveCallback(gameSavedHandler);
+ //       // cosave->SetRevertCallback(cosave::revertHandler);
+ //       s_intfc->SetLoadCallback(gameLoadedHandler);
+ //   }
+
+
 
 
 
