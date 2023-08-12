@@ -8,6 +8,10 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 
 	void UpdateLoop(float start_h) {
         logger::info("Updating LightSourceManager.");
+        if (!current_source) {
+			Stop();
+            logger::info("No current source!!No current source!!No current source!!No current source!!");
+        }
 		if (HasFuel(current_source)) {
             UpdateElapsed(start_h);
 			logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
@@ -42,13 +46,15 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
         for (auto& src : sources) {
             src.remaining = 0.f;
             src.elapsed = 0.f;
+            logger::info("{} has max duration of {}, which can be fueled by {}.", src.GetName(), src.duration,src.GetFuelName());
             SetData(src.formid, src.remaining);
         }
+        logger::info("setting current source to nullptr.");
         current_source = nullptr;
         is_burning = false;
+        allow_equip_event_sink = true;
         logger::info("LightSourceManager initialized.");
     };
-
 
 public:
     LightSourceManager(std::vector<Settings::LightSource>& data, std::chrono::milliseconds interval)
@@ -62,8 +68,7 @@ public:
 	std::vector<Settings::LightSource> sources;
     Settings::LightSource* current_source;
     bool is_burning;
-
-
+    bool allow_equip_event_sink;
 
 	void ReFuel() {
         logger::info("Refueling.");
@@ -89,6 +94,7 @@ public:
         logger::info("Stopping burning fuel.");
         PauseBurn();
         is_burning = false;
+        logger::info("setting current source to nullptr.");
         current_source = nullptr;
         logger::info("Stopped burning fuel.");
     };
@@ -97,14 +103,23 @@ public:
 
 	float GetRemaining(Settings::LightSource* src) { return src->remaining - src->elapsed; };
 
+    bool IsValidSource(RE::FormID eqp_obj) {
+        logger::info("Looking if valid source.");
+        for (auto& src : sources) {
+            if (eqp_obj == src.formid) return true;
+        }
+        return false;
+    };
+
 	bool SetSource(RE::FormID eqp_obj) {
         logger::info("Setting light source.");
         for (auto& src : sources) {
-            current_source = &src;
-            if (eqp_obj == current_source->formid) return true;
+            if (eqp_obj == src.formid) {
+                current_source = &src;
+                return true;
+            }
         }
-        current_source = nullptr;
-		return false;
+        return false;
 	};
 
     std::string_view GetName() { return current_source->GetName(); };
@@ -112,20 +127,24 @@ public:
     RE::TESBoundObject* GetBoundObject() { return current_source->GetBoundObject(); };
     RE::TESBoundObject* GetBoundFuelObject() { return current_source->GetBoundFuelObject(); }
 
-    void DetectSetSource() {
+    bool DetectSetSource() {
         logger::info("Detecting and setting light source.");
         if (current_source) StopBurn();
         else Stop();
         auto plyr = RE::PlayerCharacter::GetSingleton();
+        allow_equip_event_sink = false;
         for (auto& source : sources) {
             auto obj = source.GetBoundObject();
             if (RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, obj)) {
+                logger::info("Found source: {}", source.GetName());
                 RE::ActorEquipManager::GetSingleton()->EquipObject(plyr, obj);
                 current_source = &source;
                 StartBurn();
-                break;
+                return true;
 			}
 		}
+        allow_equip_event_sink = true;
+        return false;
     };
 
     const char* GetType() override { return "Manager"; }
@@ -142,11 +161,12 @@ public:
         for (auto& src : sources) {
             for (auto& pair : m_Data) {
 				if (pair.first == src.formid) {
-					src.remaining = pair.second;
+                    src.remaining = std::min(pair.second,src.duration);
 					break;
 				}
 			}
         }
+        logger::info("Received data.");
     };
 
 	void LogRemainings() {

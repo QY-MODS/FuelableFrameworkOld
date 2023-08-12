@@ -17,8 +17,10 @@ public:
     
     RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* event, RE::BSTEventSource<RE::TESEquipEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
-        if (!LSM->SetSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
+        if (!LSM->allow_equip_event_sink) return RE::BSEventNotifyControl::kContinue;
+        if (!LSM->IsValidSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
+            if (!LSM->SetSource(event->baseObject)) logger::info("Failed to set source. Something is terribly wrong!!!");
             logger::info("{} equipped.", LSM->GetName());
             LSM->StartBurn();
 		}
@@ -40,8 +42,21 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
             break;
         case SKSE::MessagingInterface::kNewGame:
+            logger::info("Newgame.");
             LSM->Reset();
+            logger::info("Newgame LSM reset succesful.");
             break;
+        case SKSE::MessagingInterface::kPreLoadGame:
+            logger::info("Preload.");
+            LSM->Reset();
+            logger::info("Preload LSM reset succesful.");
+			break;
+        case SKSE::MessagingInterface::kPostLoadGame:
+            logger::info("Postload.");
+            LSM->LogRemainings();
+            if (!LSM->DetectSetSource()) logger::info("No source detected, i.e. player wasnt wearing any source.");
+            logger::info("Postload LSM succesful.");
+			break;
     }
 };
 
@@ -59,7 +74,6 @@ void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
 
 void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
     logger::info("Load Start");
-    LSM->Reset();
     std::uint32_t type;
     std::uint32_t version;
     std::uint32_t length;
@@ -85,9 +99,7 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
         }
     }
     LSM->ReceiveData();
-    LSM->LogRemainings();
-    LSM->DetectSetSource();
-    logger::info("Data loaded");
+    logger::info("Data loaded from skse co-save.");
 }
 
 void InitializeSerialization() {
