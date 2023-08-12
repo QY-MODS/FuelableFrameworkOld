@@ -117,8 +117,13 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     SetupLog();
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
+    //logger::info("Loading Settings...");
     auto sources = Settings::LoadSettings();
+    //logger::info("Loading LSM...");
     LSM = LightSourceManager::GetSingleton(sources, 500);
+    /*for (auto& src : LSM->sources) {
+        logger::info("{} has max duration of {}, which can be fueled by {}.", src.GetName(), src.duration, src.GetFuelName());
+	}*/
     InitializeSerialization();
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
 

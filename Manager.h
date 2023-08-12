@@ -43,10 +43,17 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
     void Init(){
         logger::info("Initializing LightSourceManager.");
         m_Data.clear();
+   //     if (sources.empty()) {
+			//logger::info("No sources found.");
+   //     } else {
+   //         //logger::info("Found {} sources.", sources.size());
+   //         logger::info("{}",sources.data()->GetName());
+   //     }
         for (auto& src : sources) {
+            //logger::info("Found source: {}", src.GetName());
             src.remaining = 0.f;
             src.elapsed = 0.f;
-            logger::info("{} has max duration of {}, which can be fueled by {}.", src.GetName(), src.duration,src.GetFuelName());
+            //logger::info("{} has max duration of {}, which can be fueled by {}.", src.GetName(), src.duration,src.GetFuelName());
             SetData(src.formid, src.remaining);
         }
         logger::info("setting current source to nullptr.");
