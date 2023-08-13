@@ -61,7 +61,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
                 RE::DebugMessageBox(Settings::no_src_msgbox.c_str());
                 return;
             } else LSM->LogRemainings();
-            if (LSM->is_burning) LSM->StartBurn();
+            if (LSM->current_source) LSM->StartBurn();
             logger::info("Postload LSM succesful.");
 			break;
     }
@@ -75,7 +75,8 @@ void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
     if (!LSM->Save(serializationInterface, Settings::kDataKey, Settings::kSerializationVersion)) {
         logger::critical("Failed to save Data");
     }
-    serializationInterface->WriteRecordData(LSM->is_burning);
+    uint32_t equipped_obj_id = LSM->current_source ? LSM->current_source->formid : 0;
+    serializationInterface->WriteRecordData(equipped_obj_id);
     if (LSM->is_burning) {
         LSM->StartBurn();
         logger::info("Data Saved");
@@ -88,7 +89,7 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
     std::uint32_t version;
     std::uint32_t length;
     logger::info("Load Start");
-    bool is_equipped;
+    uint32_t equipped_obj_id;
     while (serializationInterface->GetNextRecordInfo(type, version, length)) {
         auto temp = Utilities::DecodeTypeCode(type);
         logger::info("Trying Load for {}", temp);
@@ -103,9 +104,9 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
                 if (!LSM->Load(serializationInterface)) {
                     logger::critical("Failed to Load Data");
                 }
-                serializationInterface->ReadRecordData(is_equipped);
-                logger::info("read bool: {}", is_equipped);
-                LSM->is_burning = is_equipped;
+                serializationInterface->ReadRecordData(equipped_obj_id);
+                logger::info("read equipped_obj_id: {}", equipped_obj_id);
+                if (equipped_obj_id) LSM->SetSource(equipped_obj_id);
             } break;
             default:
                 logger::critical("Unrecognized Record Type: {}", temp);
