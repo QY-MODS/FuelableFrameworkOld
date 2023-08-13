@@ -4,18 +4,26 @@
 
 namespace Settings {
     
+    const auto mod_name = static_cast<std::string>(SKSE::PluginDeclaration::GetSingleton()->GetName());
     constexpr auto path = L"Data/SKSE/Plugins/FuelableFramework.ini";
     constexpr auto path2 = L"Data/SKSE/SavedStates.txt";
     const char* comment = ";Make sure to use unique keys, e.g. Source1=000f11c0 Source2=05002301 ...";
     const char* default_duration = "8";
     bool verbose = false;
-    auto no_src_msgbox =
-        std::format("{}: You currently do not have any sources set up in the ini file. See mod page for instructions.", SKSE::PluginDeclaration::GetSingleton()->GetName());
+    auto no_src_msgbox = std::format("{}: You currently do not have any sources set up in the ini file. See mod page for instructions.", mod_name);
     constexpr std::uint32_t kSerializationVersion = 1;
     constexpr std::uint32_t kDataKey = 'FUEL';
     constexpr std::array<const char*, 4> InISections = {"Light Sources", "Fuel Sources", "Durations", "Other Stuff"};
     constexpr std::array<const char*, 4> InIDefaultKeys = {"src1", "src1", "src1", "PlayerSelfMessages"};
-    
+
+    std::string dec2hex(int dec) {
+        std::stringstream stream;
+        stream << std::hex << dec;
+        std::string hexString = stream.str();
+        return hexString;
+    };
+
+
     struct LightSource {
 
 		float duration;
@@ -26,10 +34,30 @@ namespace Settings {
         float remaining = 0.f;
         float elapsed = 0.f;
         
-        std::string_view GetName() { return RE::TESForm::LookupByID(formid)->GetName(); };
-        std::string_view GetFuelName() { return RE::TESForm::LookupByID(fuel)->GetName(); };
+       
+        std::string_view GetName() { 
+            auto form = RE::TESForm::LookupByID(formid);
+            if (form) return form->GetName();
+            else {
+                RE::DebugMessageBox(std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", mod_name, dec2hex(formid)).c_str());
+                return "";
+            }
+        };
+
+        std::string_view GetFuelName() {
+            auto form = RE::TESForm::LookupByID(fuel);
+            if (form)
+                return form->GetName();
+            else {
+                RE::DebugMessageBox(std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", mod_name, dec2hex(fuel)).c_str());
+                return "";
+            }
+        };
+
         RE::TESBoundObject* GetBoundObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(formid);};
         RE::TESBoundObject* GetBoundFuelObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(fuel); };
+
+
 
 	};
     
