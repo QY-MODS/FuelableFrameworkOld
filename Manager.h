@@ -45,10 +45,8 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
         m_Data.clear();
         
         for (auto& src : sources) {
-            //logger::info("Found source: {}", src.GetName());
             src.remaining = 0.f;
             src.elapsed = 0.f;
-            //logger::info("{} has max duration of {}, which can be fueled by {}.", src.GetName(), src.duration,src.GetFuelName());
             SetData(src.formid, src.remaining);
         }
         logger::info("setting current source to nullptr.");
