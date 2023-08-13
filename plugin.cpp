@@ -61,7 +61,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
                 RE::DebugMessageBox(Settings::no_src_msgbox.c_str());
                 return;
             } else LSM->LogRemainings();
-            if (!LSM->DetectSetSource()) logger::info("No source detected, i.e. player wasnt wearing any source.");
+            if (LSM->is_burning) LSM->StartBurn();
             logger::info("Postload LSM succesful.");
 			break;
     }
@@ -75,8 +75,11 @@ void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
     if (!LSM->Save(serializationInterface, Settings::kDataKey, Settings::kSerializationVersion)) {
         logger::critical("Failed to save Data");
     }
-    if (LSM->is_burning) LSM->StartBurn();
-    logger::info("Data Saved");
+    serializationInterface->WriteRecordData(LSM->is_burning);
+    if (LSM->is_burning) {
+        LSM->StartBurn();
+        logger::info("Data Saved");
+    }
 }
 
 void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
@@ -85,6 +88,7 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
     std::uint32_t version;
     std::uint32_t length;
     logger::info("Load Start");
+    bool is_equipped;
     while (serializationInterface->GetNextRecordInfo(type, version, length)) {
         auto temp = Utilities::DecodeTypeCode(type);
         logger::info("Trying Load for {}", temp);
@@ -99,6 +103,9 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
                 if (!LSM->Load(serializationInterface)) {
                     logger::critical("Failed to Load Data");
                 }
+                serializationInterface->ReadRecordData(is_equipped);
+                logger::info("read bool: {}", is_equipped);
+                LSM->is_burning = is_equipped;
             } break;
             default:
                 logger::critical("Unrecognized Record Type: {}", temp);

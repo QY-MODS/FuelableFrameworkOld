@@ -127,26 +127,6 @@ public:
     RE::TESBoundObject* GetBoundObject() { return current_source->GetBoundObject(); };
     RE::TESBoundObject* GetBoundFuelObject() { return current_source->GetBoundFuelObject(); }
 
-    bool DetectSetSource() {
-        logger::info("Detecting and setting light source.");
-        if (current_source) StopBurn();
-        else Stop();
-        auto plyr = RE::PlayerCharacter::GetSingleton();
-        allow_equip_event_sink = false;
-        for (auto& source : sources) {
-            auto obj = source.GetBoundObject();
-            if (RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, obj)) {
-                logger::info("Found source: {}", source.GetName());
-                RE::ActorEquipManager::GetSingleton()->EquipObject(plyr, obj);
-                current_source = &source;
-                StartBurn();
-                return true;
-			}
-		}
-        allow_equip_event_sink = true;
-        return false;
-    };
-
     const char* GetType() override { return "Manager"; }
 
     void SendData() {
