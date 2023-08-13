@@ -134,6 +134,7 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     SKSE::Init(skse);
     auto sources = Settings::LoadINISettings();
     LSM = LightSourceManager::GetSingleton(sources, 500);
+    logger::info("verbose: {}",Settings::verbose);
     InitializeSerialization();
 
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);

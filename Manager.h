@@ -8,10 +8,6 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 
 	void UpdateLoop(float start_h) {
         logger::info("Updating LightSourceManager.");
-        if (!current_source) {
-			Stop();
-            logger::info("No current source!!No current source!!No current source!!No current source!!");
-        }
 		if (HasFuel(current_source)) {
             UpdateElapsed(start_h);
 			logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
@@ -78,6 +74,11 @@ public:
 
 	void StartBurn() {
         logger::info("Starting to burn fuel.");
+        if (!current_source) {
+			logger::error("No current source!!No current source!!No current source!!No current source!!");
+            RE::DebugMessageBox(std::format("{}: Something went wrong. Please contact the mod author.", Settings::mod_name).c_str());
+			return;
+		}
 		Start(RE::Calendar::GetSingleton()->GetHoursPassed());
         is_burning = true;
         logger::info("Started to burn fuel.");

@@ -23,6 +23,10 @@ namespace Settings {
         return hexString;
     };
 
+    void PromptIDErrorMsgBox(RE::FormID id) {
+        logger::info("{}: The ID ({}) you have provided in the ini file could not have been found.", mod_name, dec2hex(id));
+        RE::DebugMessageBox(std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", mod_name, dec2hex(id)).c_str());
+    }
 
     struct LightSource {
 
@@ -33,25 +37,22 @@ namespace Settings {
 
         float remaining = 0.f;
         float elapsed = 0.f;
-        
+
+
+       RE::TESForm* GetForm(RE::FormID id){
+       	 auto form = RE::TESForm::LookupByID(id);
+			if (form) return form;
+            else PromptIDErrorMsgBox(id);return nullptr;
+       };
        
         std::string_view GetName() { 
-            auto form = RE::TESForm::LookupByID(formid);
-            if (form) return form->GetName();
-            else {
-                RE::DebugMessageBox(std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", mod_name, dec2hex(formid)).c_str());
-                return "";
-            }
+            auto form = GetForm(formid);
+            if (form) return form->GetName(); else return "";
         };
 
         std::string_view GetFuelName() {
-            auto form = RE::TESForm::LookupByID(fuel);
-            if (form)
-                return form->GetName();
-            else {
-                RE::DebugMessageBox(std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", mod_name, dec2hex(fuel)).c_str());
-                return "";
-            }
+            auto form = GetForm(fuel);
+            if (form) return form->GetName(); else return "";
         };
 
         RE::TESBoundObject* GetBoundObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(formid);};
@@ -72,13 +73,16 @@ namespace Settings {
 
         ini.SetUnicode();
         ini.LoadFile(path);
+
         if (!ini.SectionExists(firstSection)) {
             ini.SetValue(firstSection, nullptr, nullptr);
             ini.SetValue(firstSection, InIDefaultKeys[0], nullptr, comment);
             ini.GetAllKeys(firstSection, source_names);
         } else ini.GetAllKeys(firstSection, source_names);
+
         auto numSources = source_names.size();
         logger::info("source_names size {}", numSources);
+
         std::vector<LightSource> lightSources;
         lightSources.reserve(numSources);
 
