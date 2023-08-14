@@ -83,8 +83,10 @@ public:
 		Start(RE::Calendar::GetSingleton()->GetHoursPassed());
         is_burning = true;
         logger::info("Started to burn fuel.");
-        int _remaining = Utilities::Round(current_source->remaining, 0);
-        Utilities::MsgBoxesNotifs::InGame::Remaining(_remaining, GetName());
+        if (Settings::enabled_remainingmsg) {
+            int _remaining = Utilities::Round(current_source->remaining, 0);
+            Utilities::MsgBoxesNotifs::InGame::Remaining(_remaining, GetName());
+        }
 	};
 
     void PauseBurn() {
