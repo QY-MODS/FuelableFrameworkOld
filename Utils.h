@@ -4,8 +4,18 @@
 #include <functional>
 #include <chrono>
 #include "logger.h"
+#include <windows.h>
 
 namespace Utilities {
+
+    const auto mod_name = static_cast<std::string>(SKSE::PluginDeclaration::GetSingleton()->GetName());
+    constexpr auto path = L"Data/SKSE/Plugins/FuelableFramework.ini";
+    constexpr auto po3path = "Data/SKSE/Plugins/po3_Tweaks.dll";
+
+    const auto no_src_msgbox = std::format("{}: You currently do not have any sources set up in the ini file. See mod page for instructions.", mod_name);
+    const auto po3_err_msgbox = std::format(
+        "{}: You have given an invalid FormID. If you are using Editor IDs, you must have powerofthree's Tweaks installed. See mod page for further instructions.", mod_name);
+    const auto general_err_msgbox = std::format("{}: Something went wrong. Please contact the mod author.", mod_name);
 
     std::string DecodeTypeCode(std::uint32_t typeCode) {
         char buf[4];
@@ -15,6 +25,73 @@ namespace Utilities {
         buf[0] = char(typeCode >> 24);
         return std::string(buf, buf + 4);
     }
+
+    std::string dec2hex(int dec) {
+        std::stringstream stream;
+        stream << std::hex << dec;
+        std::string hexString = stream.str();
+        return hexString;
+    };
+
+    bool isValidHexWithLength7or8(const char* input) {
+        std::string inputStr(input);
+        std::regex hexRegex("^[0-9A-Fa-f]{7,8}$");  // Allow 7 to 8 characters
+        bool isValid = std::regex_match(inputStr, hexRegex);
+        return isValid;
+    }
+
+    float Round(float number, int decimalPlaces) { 
+        auto rounded_number = static_cast<float>(std::round(number * std::pow(10, decimalPlaces))) / std::pow(10, decimalPlaces);
+        return rounded_number;
+    }
+
+    bool IsPo3Installed() { return std::filesystem::exists(po3path); };
+    
+    namespace MsgBoxesNotifs {
+
+        namespace Windows {
+            
+            int Po3ErrMsg() {
+            MessageBoxA(nullptr,po3_err_msgbox.c_str(),"Error", MB_OK | MB_ICONERROR);
+            return 1;
+            };
+
+            int GeneralErr(){
+                MessageBoxA(nullptr, general_err_msgbox.c_str(), "Error", MB_OK | MB_ICONERROR);
+                return 1;
+            };
+        };
+
+        namespace InGame {
+            void GeneralErr() {
+                RE::DebugMessageBox(general_err_msgbox.c_str());
+            };
+
+            void NoSourceFound() { RE::DebugMessageBox(no_src_msgbox.c_str()); };
+
+            void FormIDError(RE::FormID id) {
+                RE::DebugMessageBox(
+                    std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", Utilities::mod_name, Utilities::dec2hex(id)).c_str());
+            }
+
+            void EditorIDError(std::string id) {
+                RE::DebugMessageBox(
+                    std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", Utilities::mod_name, id).c_str());
+            }
+
+            void Refuel(std::string_view item, std::string_view fuel) {
+                RE::DebugNotification(std::format("Adding {} to my {}...", fuel, item).c_str());
+            }
+            void NoFuel(std::string_view item, std::string_view fuel) {
+                RE::DebugNotification(std::format("I need {} to fuel my {}.", fuel, item).c_str());
+            }
+
+            void Remaining(int remaining, std::string_view item) { 
+                RE::DebugNotification(std::format("I have about {} hours left in my {}.", remaining, item).c_str());
+            }
+        };
+    };
+
 
     // https:  // github.com/ozooma10/OSLAroused-SKSE/blob/905d70b29875f89edfca9ede5a64c0cc126bd8fb/src/Utilities/Ticker.h
     class Ticker {

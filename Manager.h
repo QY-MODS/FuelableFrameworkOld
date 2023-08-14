@@ -30,7 +30,7 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 				logger::info("Refueled.");
 			} else {
 				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject());
-                RE::DebugNotification(std::format("My {} needs {} for fuel.", GetName(), GetFuelName()).c_str());
+                if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::NoFuel(GetName(), GetFuelName());
 				logger::info("No fuel.");
 			}
         }
@@ -68,6 +68,7 @@ public:
 
 	void ReFuel() {
         logger::info("Refueling.");
+        if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::Refuel(GetName(), GetFuelName());
         current_source->remaining = current_source->duration;
         current_source->elapsed = 0.f;
     };
@@ -76,12 +77,14 @@ public:
         logger::info("Starting to burn fuel.");
         if (!current_source) {
 			logger::error("No current source!!No current source!!No current source!!No current source!!");
-            RE::DebugMessageBox(std::format("{}: Something went wrong. Please contact the mod author.", Settings::mod_name).c_str());
+            Utilities::MsgBoxesNotifs::Windows::GeneralErr();
 			return;
 		}
 		Start(RE::Calendar::GetSingleton()->GetHoursPassed());
         is_burning = true;
         logger::info("Started to burn fuel.");
+        int _remaining = Utilities::Round(current_source->remaining, 0);
+        Utilities::MsgBoxesNotifs::InGame::Remaining(_remaining, GetName());
 	};
 
     void PauseBurn() {

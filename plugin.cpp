@@ -43,7 +43,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             logger::info("Newgame.");
             if (LSM->sources.empty()) {
                 logger::info("No sources found.");
-                RE::DebugMessageBox(Settings::no_src_msgbox.c_str());
+                Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
                 return;
             }
             LSM->Reset();
@@ -58,11 +58,19 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             logger::info("Postload.");
             if (LSM->sources.empty()) {
                 logger::info("No sources found.");
-                RE::DebugMessageBox(Settings::no_src_msgbox.c_str());
+                Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
                 return;
             } else LSM->LogRemainings();
             if (LSM->current_source) LSM->StartBurn();
             logger::info("Postload LSM succesful.");
+			break;
+        case SKSE::MessagingInterface::kDataLoaded:
+			logger::info("Dataloaded.");
+            auto sources = Settings::LoadINISettings();
+            LSM = LightSourceManager::GetSingleton(sources, 500);
+            logger::info("enabled_editor_id: {}", Settings::force_editor_id);
+            logger::info("enabled_plyrmsg: {}", Settings::enabled_plyrmsg);
+            logger::info("enabled_err_msgbox: {}", Settings::enabled_err_msgbox);
 			break;
     }
 };
@@ -132,11 +140,8 @@ SKSEPluginLoad(const SKSE::LoadInterface *skse) {
     SetupLog();
     spdlog::set_pattern("%v");
     SKSE::Init(skse);
-    auto sources = Settings::LoadINISettings();
-    LSM = LightSourceManager::GetSingleton(sources, 500);
-    logger::info("verbose: {}",Settings::verbose);
-    InitializeSerialization();
 
+    InitializeSerialization();
     SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
 
     return true;
