@@ -8,10 +8,6 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 
 	void UpdateLoop(float start_h) {
         logger::info("Updating LightSourceManager.");
-        if (!current_source) {
-			Stop();
-            logger::info("No current source!!No current source!!No current source!!No current source!!");
-        }
 		if (HasFuel(current_source)) {
             UpdateElapsed(start_h);
 			logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
@@ -34,7 +30,7 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 				logger::info("Refueled.");
 			} else {
 				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject());
-                RE::DebugNotification(std::format("My {} needs {} for fuel.", GetName(), GetFuelName()).c_str());
+                if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::NoFuel(GetName(), GetFuelName());
 				logger::info("No fuel.");
 			}
         }
@@ -43,18 +39,24 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
     void Init(){
         logger::info("Initializing LightSourceManager.");
         m_Data.clear();
-   //     if (sources.empty()) {
-			//logger::info("No sources found.");
-   //     } else {
-   //         //logger::info("Found {} sources.", sources.size());
-   //         logger::info("{}",sources.data()->GetName());
-   //     }
-        
+        bool init_failed = false;
         for (auto& src : sources) {
+            if (!src.GetFormByID(src.formid, src.editorid) || !src.GetFormByID(src.fuel, src.fuel_editorid)) {
+                init_failed = true;
+                // continue so that the user can see all the errors
+                continue;
+            } 
             src.remaining = 0.f;
             src.elapsed = 0.f;
             SetData(src.formid, src.remaining);
+            // check if forms are valid
         }
+        if (init_failed) {
+			logger::error("Failed to initialize LightSourceManager.");
+            if (Settings::enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::InitErr();
+            sources.clear();
+			return;
+		}
         logger::info("setting current source to nullptr.");
         current_source = nullptr;
         is_burning = false;
@@ -78,15 +80,25 @@ public:
 
 	void ReFuel() {
         logger::info("Refueling.");
+        if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::Refuel(GetName(), GetFuelName());
         current_source->remaining = current_source->duration;
         current_source->elapsed = 0.f;
     };
 
 	void StartBurn() {
         logger::info("Starting to burn fuel.");
+        if (!current_source) {
+			logger::error("No current source!!No current source!!No current source!!No current source!!");
+            Utilities::MsgBoxesNotifs::Windows::GeneralErr();
+			return;
+		}
 		Start(RE::Calendar::GetSingleton()->GetHoursPassed());
         is_burning = true;
         logger::info("Started to burn fuel.");
+        if (Settings::enabled_remainingmsg) {
+            int _remaining = Utilities::Round(current_source->remaining, 0);
+            Utilities::MsgBoxesNotifs::InGame::Remaining(_remaining, GetName());
+        }
 	};
 
     void PauseBurn() {
@@ -125,6 +137,7 @@ public:
                 return true;
             }
         }
+        logger::error("Did not find a match!!!");
         return false;
 	};
 
@@ -132,26 +145,6 @@ public:
     std::string_view GetFuelName() { return current_source->GetFuelName(); };
     RE::TESBoundObject* GetBoundObject() { return current_source->GetBoundObject(); };
     RE::TESBoundObject* GetBoundFuelObject() { return current_source->GetBoundFuelObject(); }
-
-    bool DetectSetSource() {
-        logger::info("Detecting and setting light source.");
-        if (current_source) StopBurn();
-        else Stop();
-        auto plyr = RE::PlayerCharacter::GetSingleton();
-        allow_equip_event_sink = false;
-        for (auto& source : sources) {
-            auto obj = source.GetBoundObject();
-            if (RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, obj)) {
-                logger::info("Found source: {}", source.GetName());
-                RE::ActorEquipManager::GetSingleton()->EquipObject(plyr, obj);
-                current_source = &source;
-                StartBurn();
-                return true;
-			}
-		}
-        allow_equip_event_sink = true;
-        return false;
-    };
 
     const char* GetType() override { return "Manager"; }
 
