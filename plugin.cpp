@@ -43,7 +43,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             logger::info("Newgame.");
             if (LSM->sources.empty()) {
                 logger::info("No sources found.");
-                Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
+                if (Settings::enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
                 return;
             }
             LSM->Reset();
@@ -58,7 +58,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             logger::info("Postload.");
             if (LSM->sources.empty()) {
                 logger::info("No sources found.");
-                Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
+                if (Settings::enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
                 return;
             } else LSM->LogRemainings();
             if (LSM->current_source) LSM->StartBurn();
