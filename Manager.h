@@ -39,12 +39,24 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
     void Init(){
         logger::info("Initializing LightSourceManager.");
         m_Data.clear();
-        
+        bool init_failed = false;
         for (auto& src : sources) {
+            if (!src.GetFormByID(src.formid, src.editorid) || !src.GetFormByID(src.fuel, src.fuel_editorid)) {
+                init_failed = true;
+                // continue so that the user can see all the errors
+                continue;
+            } 
             src.remaining = 0.f;
             src.elapsed = 0.f;
             SetData(src.formid, src.remaining);
+            // check if forms are valid
         }
+        if (init_failed) {
+			logger::error("Failed to initialize LightSourceManager.");
+            if (Settings::enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::InitErr();
+            sources.clear();
+			return;
+		}
         logger::info("setting current source to nullptr.");
         current_source = nullptr;
         is_burning = false;

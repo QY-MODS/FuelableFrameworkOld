@@ -12,10 +12,11 @@ namespace Utilities {
     constexpr auto path = L"Data/SKSE/Plugins/FuelableFramework.ini";
     constexpr auto po3path = "Data/SKSE/Plugins/po3_Tweaks.dll";
 
-    const auto no_src_msgbox = std::format("{}: You currently do not have any sources set up in the ini file. See mod page for instructions.", mod_name);
+    const auto no_src_msgbox = std::format("{}: You currently do not have any sources set up. Check your ini file or see the mod page for instructions.", mod_name);
     const auto po3_err_msgbox = std::format(
         "{}: You have given an invalid FormID. If you are using Editor IDs, you must have powerofthree's Tweaks installed. See mod page for further instructions.", mod_name);
     const auto general_err_msgbox = std::format("{}: Something went wrong. Please contact the mod author.", mod_name);
+    const auto init_err_msgbox = std::format("{}: The mod failed to initialize and will be terminated.", mod_name);
 
     std::string DecodeTypeCode(std::uint32_t typeCode) {
         char buf[4];
@@ -63,6 +64,9 @@ namespace Utilities {
         };
 
         namespace InGame {
+
+            void InitErr() { RE::DebugMessageBox(init_err_msgbox.c_str()); };
+
             void GeneralErr() {
                 RE::DebugMessageBox(general_err_msgbox.c_str());
             };
