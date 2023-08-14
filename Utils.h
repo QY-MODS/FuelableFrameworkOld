@@ -92,8 +92,8 @@ namespace Utilities {
 
             void Remaining(int remaining, std::string_view item) {
                 if (remaining < 0.00001) return;
-                if (remaining>1) RE::DebugNotification(std::format("I have about {} hours left in my {}.", remaining, item).c_str());
-                if (remaining > 0.5) RE::DebugNotification(std::format("I have about an hour left in my {}.", item).c_str());
+                else if (remaining>1) RE::DebugNotification(std::format("I have about {} hours left in my {}.", remaining, item).c_str());
+                else if (remaining > 0.5) RE::DebugNotification(std::format("I have about an hour left in my {}.", item).c_str());
                 else RE::DebugNotification(std::format("I don't have much left in my {}...", item).c_str());
             }
         };
