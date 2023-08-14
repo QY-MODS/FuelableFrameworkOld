@@ -66,46 +66,30 @@ namespace Settings {
         float remaining = 0.f;
         float elapsed = 0.f;
 
-
-		/*RE::TESForm* GetID(){
-            auto form = RE::TESForm::LookupByEditorID<RE::TESForm>(editorid);
-        };*/
-
-       RE::TESForm* GetForm(){
-       	 auto form = RE::TESForm::LookupByID(formid);
+        template <class T = RE::TESForm>
+        static T* GetFormByID(const RE::FormID& id, const std::string& editor_id){
+            T* form = RE::TESForm::LookupByID<T>(id);
 			if (form) return form;
             else {
-                if (editorid.empty()) Utilities::MsgBoxesNotifs::InGame::FormIDError(formid);
-                else Utilities::MsgBoxesNotifs::InGame::EditorIDError(editorid);
-            }
-            return nullptr;
-       };
-
-       RE::TESForm* GetFormFuel() {
-            auto form = RE::TESForm::LookupByID(fuel);
-            if (form)
-                return form;
-            else {
-                if (editorid.empty())
-                    Utilities::MsgBoxesNotifs::InGame::FormIDError(fuel);
-                else
-                    Utilities::MsgBoxesNotifs::InGame::EditorIDError(fuel_editorid);
+                if (editor_id.empty() && enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::FormIDError(id);
+                else if (enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::EditorIDError(editor_id);
             }
             return nullptr;
        };
        
         std::string_view GetName() { 
-            auto form = GetForm();
+            auto form = GetFormByID(formid,editorid);
             if (form) return form->GetName(); else return "";
         };
 
         std::string_view GetFuelName() {
-            auto form = GetFormFuel();
+            auto form = GetFormByID(fuel,fuel_editorid);
             if (form) return form->GetName(); else return "";
         };
 
-        RE::TESBoundObject* GetBoundObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(formid);};
-        RE::TESBoundObject* GetBoundFuelObject() { return RE::TESForm::LookupByID<RE::TESBoundObject>(fuel); };
+        RE::TESBoundObject* GetBoundObject() { return GetFormByID<RE::TESBoundObject>(formid,editorid);};
+
+        RE::TESBoundObject* GetBoundFuelObject() { return GetFormByID<RE::TESBoundObject>(fuel, fuel_editorid); };
 
 	};
     
