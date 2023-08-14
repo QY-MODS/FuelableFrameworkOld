@@ -26,7 +26,7 @@ public:
 		}
         else {
             logger::info("{} unequipped.", LSM->GetName());
-			LSM->StopBurn();
+            LSM->StopBurn();
             logger::info("timer stopped.");
 		}
         return RE::BSEventNotifyControl::kContinue;

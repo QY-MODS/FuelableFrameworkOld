@@ -29,8 +29,9 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 				ReFuel();
 				logger::info("Refueled.");
 			} else {
-				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject());
                 if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::NoFuel(GetName(), GetFuelName());
+                // This has to be the last thing that happens in this function, which involves current_source because current_source is set to nullptr in the main thread
+				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject());
 				logger::info("No fuel.");
 			}
         }
@@ -41,7 +42,7 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
         m_Data.clear();
         bool init_failed = false;
         for (auto& src : sources) {
-            if (!src.GetFormByID(src.formid, src.editorid) || !src.GetFormByID(src.fuel, src.fuel_editorid)) {
+            if (!src.GetFormByID(src.formid, src.editorid) || !src.GetFormByID(src.fuel, src.fuel_editorid) || !src.GetBoundObject() || !src.GetBoundFuelObject() ) {
                 init_failed = true;
                 // continue so that the user can see all the errors
                 continue;
@@ -57,7 +58,7 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
             sources.clear();
 			return;
 		}
-        logger::info("setting current source to nullptr.");
+        logger::info("setting current source to nullptr (Init).");
         current_source = nullptr;
         is_burning = false;
         allow_equip_event_sink = true;
@@ -106,13 +107,14 @@ public:
         Stop();
         current_source->remaining -= current_source->elapsed;
         current_source->elapsed = 0.f;
+        logger::info("Paused burning fuel.");
     };
 
 	void StopBurn() {
         logger::info("Stopping burning fuel.");
         PauseBurn();
         is_burning = false;
-        logger::info("setting current source to nullptr.");
+        logger::info("setting current source to nullptr (StopBurn).");
         current_source = nullptr;
         logger::info("Stopped burning fuel.");
     };
