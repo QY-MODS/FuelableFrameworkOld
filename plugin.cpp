@@ -21,13 +21,10 @@ public:
         if (!LSM->IsValidSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
             if (!LSM->SetSource(event->baseObject)) logger::info("Failed to set source. Something is terribly wrong!!!");
-            logger::info("{} equipped.", LSM->GetName());
             LSM->StartBurn();
 		}
         else {
-            logger::info("{} unequipped.", LSM->GetName());
             LSM->StopBurn();
-            logger::info("timer stopped.");
 		}
         return RE::BSEventNotifyControl::kContinue;
     }
@@ -68,9 +65,6 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
 			logger::info("Dataloaded.");
             auto sources = Settings::LoadINISettings();
             LSM = LightSourceManager::GetSingleton(sources, 500);
-            logger::info("enabled_editor_id: {}", Settings::force_editor_id);
-            logger::info("enabled_plyrmsg: {}", Settings::enabled_plyrmsg);
-            logger::info("enabled_err_msgbox: {}", Settings::enabled_err_msgbox);
 			break;
     }
 };
@@ -79,7 +73,6 @@ void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
     logger::info("Save Start");
     if (LSM->is_burning) LSM->PauseBurn();
     LSM->SendData();
-    LSM->LogRemainings();
     if (!LSM->Save(serializationInterface, Settings::kDataKey, Settings::kSerializationVersion)) {
         logger::critical("Failed to save Data");
     }

@@ -7,15 +7,12 @@
 class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormFloat {
 
 	void UpdateLoop(float start_h) {
-        logger::info("Updating LightSourceManager.");
 		if (HasFuel(current_source)) {
             UpdateElapsed(start_h);
-			logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
         } else NoFuel();
 	};
 
 	void UpdateElapsed(float start) {
-        logger::info("Updating elapsed time.");
 		current_source->elapsed = RE::Calendar::GetSingleton()->GetHoursPassed() - start;
 	};
 
@@ -58,7 +55,6 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
             sources.clear();
 			return;
 		}
-        logger::info("setting current source to nullptr (Init).");
         current_source = nullptr;
         is_burning = false;
         allow_equip_event_sink = true;
@@ -80,14 +76,12 @@ public:
     bool allow_equip_event_sink;
 
 	void ReFuel() {
-        logger::info("Refueling.");
         if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::Refuel(GetName(), GetFuelName());
         current_source->remaining = current_source->duration;
         current_source->elapsed = 0.f;
     };
 
 	void StartBurn() {
-        logger::info("Starting to burn fuel.");
         if (!current_source) {
 			logger::error("No current source!!No current source!!No current source!!No current source!!");
             Utilities::MsgBoxesNotifs::Windows::GeneralErr();
@@ -103,20 +97,15 @@ public:
 	};
 
     void PauseBurn() {
-        logger::info("Pausing burning fuel.");
         Stop();
         current_source->remaining -= current_source->elapsed;
         current_source->elapsed = 0.f;
-        logger::info("Paused burning fuel.");
     };
 
 	void StopBurn() {
-        logger::info("Stopping burning fuel.");
         PauseBurn();
         is_burning = false;
-        logger::info("setting current source to nullptr (StopBurn).");
         current_source = nullptr;
-        logger::info("Stopped burning fuel.");
     };
 
 	bool HasFuel(Settings::LightSource* src) { return GetRemaining(src) > 0.0001;};
@@ -124,7 +113,6 @@ public:
 	float GetRemaining(Settings::LightSource* src) { return src->remaining - src->elapsed; };
 
     bool IsValidSource(RE::FormID eqp_obj) {
-        logger::info("Looking if valid source.");
         for (auto& src : sources) {
             if (eqp_obj == src.formid) return true;
         }
@@ -132,7 +120,6 @@ public:
     };
 
 	bool SetSource(RE::FormID eqp_obj) {
-        logger::info("Setting light source.");
         for (auto& src : sources) {
             if (eqp_obj == src.formid) {
                 current_source = &src;
@@ -151,14 +138,12 @@ public:
     const char* GetType() override { return "Manager"; }
 
     void SendData() {
-        logger::info("Sending data.");
         for (auto& src : sources) {
             SetData(src.formid, src.remaining);
         }
     };
 
     void ReceiveData() {
-        logger::info("Receiving data.");
         for (auto& src : sources) {
             for (auto& pair : m_Data) {
 				if (pair.first == src.formid) {
@@ -167,15 +152,7 @@ public:
 				}
 			}
         }
-        logger::info("Received data.");
     };
-
-	void LogRemainings() {
-        logger::info("Logging remaining hours...");
-		for (auto& src : sources) {
-			logger::info("Remaining hours for {}: {}", src.GetName(), src.remaining);
-		}
-	}
     
     void Reset(){
         logger::info("Resetting LightSourceManager.");
