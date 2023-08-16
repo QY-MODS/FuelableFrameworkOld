@@ -31,7 +31,7 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 			} else {
                 if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::NoFuel(GetName(), GetFuelName());
                 // This has to be the last thing that happens in this function, which involves current_source because current_source is set to nullptr in the main thread
-				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject());
+				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject(),nullptr,1,nullptr,true,false,false);
 				logger::info("No fuel.");
 			}
         }
