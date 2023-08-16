@@ -57,7 +57,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
                 logger::info("No sources found.");
                 if (Settings::enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
                 return;
-            } else LSM->LogRemainings();
+            }
             if (LSM->current_source) LSM->StartBurn();
             logger::info("Postload LSM succesful.");
 			break;
