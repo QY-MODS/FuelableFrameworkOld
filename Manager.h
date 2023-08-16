@@ -7,15 +7,15 @@
 class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormFloat {
 
 	void UpdateLoop(float start_h) {
-        logger::info("Updating LightSourceManager.");
+        //logger::info("Updating LightSourceManager.");
 		if (HasFuel(current_source)) {
             UpdateElapsed(start_h);
-			logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
+			//logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
         } else NoFuel();
 	};
 
 	void UpdateElapsed(float start) {
-        logger::info("Updating elapsed time.");
+        //logger::info("Updating elapsed time.");
 		current_source->elapsed = RE::Calendar::GetSingleton()->GetHoursPassed() - start;
 	};
 
@@ -103,7 +103,7 @@ public:
 	};
 
     void PauseBurn() {
-        logger::info("Pausing burning fuel.");
+        //logger::info("Pausing burning fuel.");
         Stop();
         current_source->remaining -= current_source->elapsed;
         current_source->elapsed = 0.f;
@@ -111,10 +111,11 @@ public:
     };
 
 	void StopBurn() {
-        logger::info("Stopping burning fuel.");
+        //logger::info("Stopping burning fuel.");
         PauseBurn();
         is_burning = false;
         logger::info("setting current source to nullptr (StopBurn).");
+        auto plyr = RE::PlayerCharacter::GetSingleton();
         current_source = nullptr;
         logger::info("Stopped burning fuel.");
     };
@@ -124,7 +125,7 @@ public:
 	float GetRemaining(Settings::LightSource* src) { return src->remaining - src->elapsed; };
 
     bool IsValidSource(RE::FormID eqp_obj) {
-        logger::info("Looking if valid source.");
+        //logger::info("Looking if valid source.");
         for (auto& src : sources) {
             if (eqp_obj == src.formid) return true;
         }
@@ -132,7 +133,7 @@ public:
     };
 
 	bool SetSource(RE::FormID eqp_obj) {
-        logger::info("Setting light source.");
+        //logger::info("Setting light source.");
         for (auto& src : sources) {
             if (eqp_obj == src.formid) {
                 current_source = &src;
@@ -151,14 +152,14 @@ public:
     const char* GetType() override { return "Manager"; }
 
     void SendData() {
-        logger::info("Sending data.");
+        //logger::info("Sending data.");
         for (auto& src : sources) {
             SetData(src.formid, src.remaining);
         }
     };
 
     void ReceiveData() {
-        logger::info("Receiving data.");
+        //logger::info("Receiving data.");
         for (auto& src : sources) {
             for (auto& pair : m_Data) {
 				if (pair.first == src.formid) {
@@ -171,9 +172,9 @@ public:
     };
 
 	void LogRemainings() {
-        logger::info("Logging remaining hours...");
+        //logger::info("Logging remaining hours...");
 		for (auto& src : sources) {
-			logger::info("Remaining hours for {}: {}", src.GetName(), src.remaining);
+			//logger::info("Remaining hours for {}: {}", src.GetName(), src.remaining);
 		}
 	}
     
