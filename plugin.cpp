@@ -21,6 +21,7 @@ public:
         if (!LSM->IsValidSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
             if (!LSM->SetSource(event->baseObject)) logger::info("Failed to set source. Something is terribly wrong!!!");
+            logger::info("Equipped source.");
             LSM->StartBurn();
 		}
         else {

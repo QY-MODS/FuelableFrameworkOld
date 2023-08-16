@@ -4,12 +4,65 @@
 #include "Settings.h"
 
 
+bool dontplaysound = false;
+
+// https://discord.com/channels/874895328938172446/945560222670393406/1088987693616201829
+struct UnknownStructFor4thArg {
+    // members
+    RE::ExtraDataList* extraData;  // 00
+    std::uint32_t count;           // 08
+    std::uint32_t pad0C;           // 0C
+    RE::BGSEquipSlot* slot;        // 10
+    void* unk18;                   // 18
+    bool queueEquip;               // 20
+    bool forceEquip;               // 21
+    bool playSounds;               // 22
+    bool applyNow;                 // 23
+    bool unk;                      // 24
+};
+static_assert(sizeof(UnknownStructFor4thArg) == 0x28);
+
+//Nightfallstorm: https://discord.com/channels/874895328938172446/945560222670393406/1088622858911105125
+struct MyThunkHook1 {
+    static uint64_t thunk(RE::ActorEquipManager* a_self, RE::Actor* a_actor, RE::TESBoundObject* a_object, UnknownStructFor4thArg a_unk) {
+        logger::info("EquipObject called.");
+        //if (dontplaysound) 
+        logger::info("PLAY SOUNDSSS: {}", a_unk.playSounds);
+        a_unk.playSounds = false;
+        logger::info("PLAY SOUNDSSS: {}", a_unk.playSounds);
+        return func(a_self, a_actor, a_object, a_unk);  // Original function
+    }
+
+    static inline REL::Relocation<decltype(thunk)> func;
+
+    // Install our hook at the specified address
+    static inline void Install() {
+        REL::Relocation<std::uintptr_t> target{RELOCATION_ID(37938, 38894), REL::VariantOffset(0xE5, 0x170, 0xE5)};
+        stl::write_thunk_call<MyThunkHook1>(target.address());
+
+    }
+};
+
+
 class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormFloat {
 
 	void UpdateLoop(float start_h) {
 		if (HasFuel(current_source)) {
             UpdateElapsed(start_h);
-        } else NoFuel();
+        } else {
+            Stop();
+            allow_equip_event_sink = false;
+            dontplaysound = true;
+            auto light = RE::TESForm::LookupByEditorID<RE::TESObjectLIGH>("QwibLanternLight");
+            RE::ActorEquipManager::GetSingleton()->UnequipObject(RE::PlayerCharacter::GetSingleton()->As<RE::Actor>(), GetBoundObject(), nullptr, 1, nullptr, true, false, false);
+            light->data.radius = 0;
+            RE::ActorEquipManager::GetSingleton()->EquipObject(RE::PlayerCharacter::GetSingleton()->As<RE::Actor>(), GetBoundObject(), nullptr, 1, nullptr, true, false, false,
+                                                               false);
+
+
+            dontplaysound = true;  
+            // NoFuel();
+        }
 	};
 
 	void UpdateElapsed(float start) {
@@ -44,7 +97,7 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
                 // continue so that the user can see all the errors
                 continue;
             } 
-            src.remaining = 0.f;
+            src.remaining = 1.f;
             src.elapsed = 0.f;
             SetData(src.formid, src.remaining);
             // check if forms are valid
@@ -58,8 +111,10 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
         current_source = nullptr;
         is_burning = false;
         allow_equip_event_sink = true;
+
         logger::info("LightSourceManager initialized.");
     };
+
 
 public:
     LightSourceManager(std::vector<Settings::LightSource>& data, std::chrono::milliseconds interval)
