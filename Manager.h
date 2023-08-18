@@ -6,18 +6,29 @@
 
 class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormFloat {
 
-	void UpdateLoop(float start_h) {
+    RE::Calendar* cal;
+    RE::UI* ui;
+    bool __restart;
+    float __start_h;
+
+	void UpdateLoop() {
+        if (__restart) {
+            is_burning = true;
+            __restart = false;
+            __start_h = cal->GetHoursPassed();
+        }
         logger::info("Updating LightSourceManager.");
+        logger::info("start_h: {}", __start_h);
+        logger::info("hours passed: {}", cal->GetHoursPassed());
+        if (ui->GameIsPaused()) return;
 		if (HasFuel(current_source)) {
-            UpdateElapsed(start_h);
-			logger::info("Remaining hours: {}", current_source->remaining - current_source->elapsed);
+            current_source->elapsed = cal->GetHoursPassed() - __start_h;
+            logger::info("elapsed: {}", current_source->elapsed);
+            logger::info("Remaining hours: {} (remaining: {}) (elapsed: {})", current_source->remaining - current_source->elapsed, current_source->remaining,
+                         current_source->elapsed);
         } else NoFuel();
 	};
 
-	void UpdateElapsed(float start) {
-        logger::info("Updating elapsed time.");
-		current_source->elapsed = RE::Calendar::GetSingleton()->GetHoursPassed() - start;
-	};
 
 	void NoFuel(){
 		logger::info("No fuel.");
@@ -25,10 +36,15 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
         if (plyr) {
 			auto fuel_item = GetBoundFuelObject();
             if (plyr->GetItemCount(fuel_item) > 0) {
-                plyr->RemoveItem(fuel_item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
-				ReFuel();
+                logger::info("Refueling.");
+                if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::Refuel(GetName(), GetFuelName());
+                PauseBurn();
+                plyr->RemoveItem(fuel_item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr); // Refuel
+                current_source->remaining += current_source->duration; // Refuel
 				logger::info("Refueled.");
+                Start();
 			} else {
+                Stop(); // better safe than sorry?
                 if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::NoFuel(GetName(), GetFuelName());
                 // This has to be the last thing that happens in this function, which involves current_source because current_source is set to nullptr in the main thread
 				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject(),nullptr,1,nullptr,true,false,false);
@@ -36,6 +52,11 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 			}
         }
 	}
+
+    float GetRemaining(Settings::LightSource* src) { return src->remaining - src->elapsed; };
+    bool HasFuel(Settings::LightSource* src) { return GetRemaining(src) > 0.0001; };
+
+
 
     void Init(){
         logger::info("Initializing LightSourceManager.");
@@ -61,13 +82,19 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
         logger::info("setting current source to nullptr (Init).");
         current_source = nullptr;
         is_burning = false;
-        allow_equip_event_sink = true;
+        //allow_equip_event_sink = true;
+        
+        __restart = true;
+        cal = RE::Calendar::GetSingleton();
+        ui = RE::UI::GetSingleton();
+
         logger::info("LightSourceManager initialized.");
     };
 
+
 public:
     LightSourceManager(std::vector<Settings::LightSource>& data, std::chrono::milliseconds interval)
-        : sources(data), Utilities::Ticker([this](float start_h) { UpdateLoop(start_h); }, interval) {Init();};
+        : sources(data), Utilities::Ticker([this]() { UpdateLoop(); }, interval) {Init();};
 
     static LightSourceManager* GetSingleton(std::vector<Settings::LightSource>& data, int u_intervall) {
         static LightSourceManager singleton(data,std::chrono::milliseconds(u_intervall));
@@ -77,29 +104,24 @@ public:
 	std::vector<Settings::LightSource> sources;
     Settings::LightSource* current_source;
     bool is_burning;
-    bool allow_equip_event_sink;
+    //bool allow_equip_event_sink;
 
-	void ReFuel() {
-        logger::info("Refueling.");
-        if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::Refuel(GetName(), GetFuelName());
-        current_source->remaining = current_source->duration;
-        current_source->elapsed = 0.f;
-    };
 
 	void StartBurn() {
+        if (is_burning) {
+            logger::info("Already burning.");
+            return;
+        }
         logger::info("Starting to burn fuel.");
         if (!current_source) {
 			logger::error("No current source!!No current source!!No current source!!No current source!!");
             Utilities::MsgBoxesNotifs::Windows::GeneralErr();
 			return;
 		}
-		Start(RE::Calendar::GetSingleton()->GetHoursPassed());
-        is_burning = true;
         logger::info("Started to burn fuel.");
-        if (Settings::enabled_remainingmsg) {
-            int _remaining = Utilities::Round(current_source->remaining, 0);
-            Utilities::MsgBoxesNotifs::InGame::Remaining(_remaining, GetName());
-        }
+        ShowRemaining();
+        __restart = true;
+		Start();
 	};
 
     void PauseBurn() {
@@ -107,21 +129,25 @@ public:
         Stop();
         current_source->remaining -= current_source->elapsed;
         current_source->elapsed = 0.f;
+        __restart = true;
         logger::info("Paused burning fuel.");
     };
+
+    void UnPauseBurn() {
+		logger::info("Unpausing burning fuel.");
+		Start();
+		logger::info("Unpaused burning fuel.");
+	};
 
 	void StopBurn() {
         logger::info("Stopping burning fuel.");
         PauseBurn();
-        is_burning = false;
+        is_burning = false; 
         logger::info("setting current source to nullptr (StopBurn).");
         current_source = nullptr;
         logger::info("Stopped burning fuel.");
     };
 
-	bool HasFuel(Settings::LightSource* src) { return GetRemaining(src) > 0.0001;};
-
-	float GetRemaining(Settings::LightSource* src) { return src->remaining - src->elapsed; };
 
     bool IsValidSource(RE::FormID eqp_obj) {
         logger::info("Looking if valid source.");
@@ -176,6 +202,12 @@ public:
 			logger::info("Remaining hours for {}: {}", src.GetName(), src.remaining);
 		}
 	}
+
+    void ShowRemaining() {
+        if (!Settings::enabled_remainingmsg) return;
+        int _remaining = Utilities::Round2Int(current_source->remaining);
+        Utilities::MsgBoxesNotifs::InGame::Remaining(_remaining, GetName());
+    }
     
     void Reset(){
         logger::info("Resetting LightSourceManager.");

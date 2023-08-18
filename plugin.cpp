@@ -17,7 +17,7 @@ public:
     
     RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* event, RE::BSTEventSource<RE::TESEquipEvent>*) {
         if (!event) return RE::BSEventNotifyControl::kContinue;
-        if (!LSM->allow_equip_event_sink) return RE::BSEventNotifyControl::kContinue;
+        //if (!LSM->allow_equip_event_sink) return RE::BSEventNotifyControl::kContinue;
         if (!LSM->IsValidSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
             if (!LSM->SetSource(event->baseObject)) logger::info("Failed to set source. Something is terribly wrong!!!");
@@ -86,7 +86,7 @@ void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
     uint32_t equipped_obj_id = LSM->current_source ? LSM->current_source->formid : 0;
     serializationInterface->WriteRecordData(equipped_obj_id);
     if (LSM->is_burning) {
-        LSM->StartBurn();
+        LSM->UnPauseBurn();
         logger::info("Data Saved");
     }
 }

@@ -46,6 +46,11 @@ namespace Utilities {
         return rounded_number;
     }
 
+    int Round2Int(float number) {
+		auto rounded_number = static_cast<int>(Round(number,0));
+		return rounded_number;
+	}
+
     bool IsPo3Installed() { return std::filesystem::exists(po3path); };
     
     namespace MsgBoxesNotifs {
@@ -100,19 +105,19 @@ namespace Utilities {
     };
 
 
-    // https:  // github.com/ozooma10/OSLAroused-SKSE/blob/905d70b29875f89edfca9ede5a64c0cc126bd8fb/src/Utilities/Ticker.h
+    // https://github.com/ozooma10/OSLAroused-SKSE/blob/master/src/Utilities/Ticker.h
     class Ticker {
     public:
-        Ticker(std::function<void(float)> onTick, std::chrono::milliseconds interval) : m_OnTick(onTick), m_Interval(interval), m_Running(false), m_ThreadActive(false) {}
+        Ticker(std::function<void()> onTick, std::chrono::milliseconds interval) : m_OnTick(onTick), m_Interval(interval), m_Running(false), m_ThreadActive(false) {}
 
-        void Start(float start_time) {
+        void Start() {
             if (m_Running) {
                 return;
             }
             m_Running = true;
             // logger::info("Start Called with thread active state of: {}", m_ThreadActive);
             if (!m_ThreadActive) {
-                std::thread tickerThread(&Ticker::RunLoop, this, start_time);
+                std::thread tickerThread(&Ticker::RunLoop, this);
                 tickerThread.detach();
             }
         }
@@ -126,10 +131,13 @@ namespace Utilities {
         }
 
     private:
-        void RunLoop(float start_t) {
+
+
+
+        void RunLoop() {
             m_ThreadActive = true;
             while (m_Running) {
-                std::thread runnerThread(m_OnTick, start_t);
+                std::thread runnerThread(m_OnTick);
                 runnerThread.detach();
 
                 m_IntervalMutex.lock();
@@ -140,7 +148,7 @@ namespace Utilities {
             m_ThreadActive = false;
         }
 
-        std::function<void(float)> m_OnTick;
+        std::function<void()> m_OnTick;
         std::chrono::milliseconds m_Interval;
 
         std::atomic<bool> m_ThreadActive;
