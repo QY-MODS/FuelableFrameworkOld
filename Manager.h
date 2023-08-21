@@ -127,10 +127,25 @@ public:
 
     bool IsValidSource(RE::FormID eqp_obj) {
         for (auto& src : sources) {
-            if (eqp_obj == src.formid) return true;
+            logger::info("in for loop.");
+            logger::info("src.formid: {}", src.formid);
+            if (eqp_obj == src.formid) {
+                logger::info("Found a match.");
+                return true;
+            }
         }
+        logger::info("Did not find a match.");
         return false;
     };
+
+    bool IsCurrentSource(RE::FormID eqp_obj) {
+		logger::info("Looking if eqp_obj is current source.");
+        if (!current_source) {
+            logger::info("No current source.");
+            return false;
+        }
+		return eqp_obj == current_source->formid;
+	};
 
 	bool SetSource(RE::FormID eqp_obj) {
         for (auto& src : sources) {
