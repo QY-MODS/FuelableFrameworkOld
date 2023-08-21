@@ -26,10 +26,10 @@ public:
                 return RE::BSEventNotifyControl::kContinue;
             }
             if (!LSM->SetSource(event->baseObject)) logger::info("Failed to set source. Something is terribly wrong!!!");
-            logger::info("{} equipped.", LSM->GetName());
             LSM->StartBurn();
 		}
         else {
+          
             logger::info("Unequip event!");
             if (!LSM->IsCurrentSource(event->baseObject)) {
                 logger::info("How is this possible?! Ignoring..."); // Either already unequipped or another source is getting unequipped without getting equipped in the first place. Atm also possible upon loading a savegame.
@@ -46,11 +46,9 @@ public:
 void OnMessage(SKSE::MessagingInterface::Message* message) {
     switch (message->type) {
         case SKSE::MessagingInterface::kPostPostLoad:
-            logger::info("Postpostload.");
             RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(OurEventSink::GetSingleton());
             break;
         case SKSE::MessagingInterface::kNewGame:
-            logger::info("Newgame.");
             if (LSM->sources.empty()) {
                 logger::info("No sources found.");
                 if (Settings::enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
@@ -60,14 +58,12 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             logger::info("Newgame LSM reset succesful.");
             break;
         case SKSE::MessagingInterface::kPreLoadGame:
-            logger::info("Preload.");
             LSM->Reset();
             logger::info("Preload LSM reset succesful.");
 			break;
         case SKSE::MessagingInterface::kPostLoadGame:
-            logger::info("Postload.");
             if (LSM->sources.empty()) {
-                logger::info("No sources found.");
+                logger::info("No sources found (PostLoad).");
                 if (Settings::enabled_err_msgbox) Utilities::MsgBoxesNotifs::InGame::NoSourceFound();
                 return;
             } else LSM->LogRemainings();
@@ -75,18 +71,13 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             logger::info("Postload LSM succesful.");
 			break;
         case SKSE::MessagingInterface::kDataLoaded:
-			logger::info("Dataloaded.");
             auto sources = Settings::LoadINISettings();
             LSM = LightSourceManager::GetSingleton(sources, 500);
-            logger::info("enabled_editor_id: {}", Settings::force_editor_id);
-            logger::info("enabled_plyrmsg: {}", Settings::enabled_plyrmsg);
-            logger::info("enabled_err_msgbox: {}", Settings::enabled_err_msgbox);
 			break;
     }
 };
 
 void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
-    logger::info("Save Start");
     if (LSM->is_burning) LSM->PauseBurn();
     LSM->SendData();
     LSM->LogRemainings();
@@ -140,7 +131,6 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
 }
 
 void InitializeSerialization() {
-    SKSE::log::trace("Initializing cosave serialization...");
     auto* serialization = SKSE::GetSerializationInterface();
     serialization->SetUniqueID(Settings::kDataKey);
     serialization->SetSaveCallback(SaveCallback);
