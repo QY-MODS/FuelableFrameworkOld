@@ -6,7 +6,7 @@ set(steam_mods_output true)
 cmake_minimum_required(VERSION 3.21)
 
 # Set your project name. This will be the name of your SKSE .dll file.
-project(FuelableFramework VERSION 0.2 LANGUAGES CXX)
+project(FuelableFramework VERSION 0.3 LANGUAGES CXX)
 
 # #
 # YOU DO NOT NEED TO EDIT ANYTHING BELOW HERE
