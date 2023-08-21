@@ -20,24 +20,13 @@ public:
         //if (!LSM->allow_equip_event_sink) return RE::BSEventNotifyControl::kContinue;
         if (!LSM->IsValidSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
-            logger::info("Equip event!");
-            if (LSM->IsCurrentSource(event->baseObject)) {
-                logger::info("Already equipped!!! Dunno how that can happen?! Ignoring...");
-                return RE::BSEventNotifyControl::kContinue;
-            }
+            if (LSM->IsCurrentSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
             if (!LSM->SetSource(event->baseObject)) logger::info("Failed to set source. Something is terribly wrong!!!");
             LSM->StartBurn();
 		}
         else {
-          
-            logger::info("Unequip event!");
-            if (!LSM->IsCurrentSource(event->baseObject)) {
-                logger::info("How is this possible?! Ignoring..."); // Either already unequipped or another source is getting unequipped without getting equipped in the first place. Atm also possible upon loading a savegame.
-                return RE::BSEventNotifyControl::kContinue;
-            }
-            logger::info("{} unequipped.", LSM->GetName());
+            if (!LSM->IsCurrentSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
             LSM->StopBurn();
-            logger::info("timer stopped.");
 		}
         return RE::BSEventNotifyControl::kContinue;
     }
@@ -93,15 +82,12 @@ void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
 }
 
 void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
-    logger::info("Load Start");
     std::uint32_t type;
     std::uint32_t version;
     std::uint32_t length;
-    logger::info("Load Start");
     uint32_t equipped_obj_id;
     while (serializationInterface->GetNextRecordInfo(type, version, length)) {
         auto temp = Utilities::DecodeTypeCode(type);
-        logger::info("Trying Load for {}", temp);
 
         if (version != Settings::kSerializationVersion) {
             logger::critical("Loaded data has incorrect version. Recieved ({}) - Expected ({}) for Data Key ({})",
@@ -114,7 +100,6 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
                     logger::critical("Failed to Load Data");
                 }
                 serializationInterface->ReadRecordData(equipped_obj_id);
-                logger::info("read equipped_obj_id: {}", equipped_obj_id);
                 if (equipped_obj_id) {
                     if (!LSM->SetSource(equipped_obj_id)) {
                         Utilities::MsgBoxesNotifs::InGame::LoadOrderError();
