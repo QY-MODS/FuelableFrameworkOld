@@ -20,11 +20,17 @@ public:
         //if (!LSM->allow_equip_event_sink) return RE::BSEventNotifyControl::kContinue;
         if (!LSM->IsValidSource(event->baseObject)) return RE::BSEventNotifyControl::kContinue;
         if (event->equipped) {
+            logger::info("Equip event!");
+            if (LSM->IsCurrentSource(event->baseObject)) {
+                logger::info("Already equipped!!! Dunno how that can happen?! Ignoring...");
+                return RE::BSEventNotifyControl::kContinue;
+            }
             if (!LSM->SetSource(event->baseObject)) logger::info("Failed to set source. Something is terribly wrong!!!");
             logger::info("{} equipped.", LSM->GetName());
             LSM->StartBurn();
 		}
         else {
+            logger::info("Unequip event!");
             logger::info("{} unequipped.", LSM->GetName());
             LSM->StopBurn();
             logger::info("timer stopped.");
