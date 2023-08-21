@@ -31,6 +31,10 @@ public:
 		}
         else {
             logger::info("Unequip event!");
+            if (!LSM->IsCurrentSource(event->baseObject)) {
+                logger::info("How is this possible?! Ignoring..."); // Either already unequipped or another source is getting unequipped without getting equipped in the first place.
+                return RE::BSEventNotifyControl::kContinue;
+            }
             logger::info("{} unequipped.", LSM->GetName());
             LSM->StopBurn();
             logger::info("timer stopped.");
