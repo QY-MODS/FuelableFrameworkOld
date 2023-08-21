@@ -32,7 +32,7 @@ public:
         else {
             logger::info("Unequip event!");
             if (!LSM->IsCurrentSource(event->baseObject)) {
-                logger::info("How is this possible?! Ignoring..."); // Either already unequipped or another source is getting unequipped without getting equipped in the first place.
+                logger::info("How is this possible?! Ignoring..."); // Either already unequipped or another source is getting unequipped without getting equipped in the first place. Atm also possible upon loading a savegame.
                 return RE::BSEventNotifyControl::kContinue;
             }
             logger::info("{} unequipped.", LSM->GetName());
@@ -124,7 +124,11 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
                 }
                 serializationInterface->ReadRecordData(equipped_obj_id);
                 logger::info("read equipped_obj_id: {}", equipped_obj_id);
-                if (equipped_obj_id) LSM->SetSource(equipped_obj_id);
+                if (equipped_obj_id) {
+                    if (!LSM->SetSource(equipped_obj_id)) {
+                        Utilities::MsgBoxesNotifs::InGame::LoadOrderError();
+                    }
+                }
             } break;
             default:
                 logger::critical("Unrecognized Record Type: {}", temp);

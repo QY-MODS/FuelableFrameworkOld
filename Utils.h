@@ -17,6 +17,8 @@ namespace Utilities {
         "{}: You have given an invalid FormID. If you are using Editor IDs, you must have powerofthree's Tweaks installed. See mod page for further instructions.", mod_name);
     const auto general_err_msgbox = std::format("{}: Something went wrong. Please contact the mod author.", mod_name);
     const auto init_err_msgbox = std::format("{}: The mod failed to initialize and will be terminated.", mod_name);
+    const auto load_order_msgbox = std::format("The equipped light source from your save game could not be registered. Please unequip and reequip it. If you had fuel in it, it will be lost. This issue will be solved in the next version.");
+
 
     std::string DecodeTypeCode(std::uint32_t typeCode) {
         char buf[4];
@@ -86,6 +88,10 @@ namespace Utilities {
             void EditorIDError(std::string id) {
                 RE::DebugMessageBox(
                     std::format("{}: The ID ({}) you have provided in the ini file could not have been found.", Utilities::mod_name, id).c_str());
+            }
+
+            void LoadOrderError() { 
+                RE::DebugMessageBox((std::format("{}: ", Utilities::mod_name) + load_order_msgbox).c_str());
             }
 
             void Refuel(std::string_view item, std::string_view fuel) {
