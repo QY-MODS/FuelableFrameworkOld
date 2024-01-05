@@ -60,6 +60,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
             logger::info("Postload LSM succesful.");
 			break;
         case SKSE::MessagingInterface::kDataLoaded:
+            // Start
             auto sources = Settings::LoadINISettings();
             LSM = LightSourceManager::GetSingleton(sources, 500);
 			break;
@@ -67,6 +68,7 @@ void OnMessage(SKSE::MessagingInterface::Message* message) {
 };
 
 void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
+    if (!LSM->current_source) logger::info("Saviung...btw, current_source is nullptr.");
     if (LSM->is_burning) LSM->PauseBurn();
     LSM->SendData();
     LSM->LogRemainings();
@@ -74,7 +76,9 @@ void SaveCallback(SKSE::SerializationInterface* serializationInterface) {
         logger::critical("Failed to save Data");
     }
     uint32_t equipped_obj_id = LSM->current_source ? LSM->current_source->formid : 0;
+    uint32_t fuel_id = LSM->current_source ? LSM->current_source->fuel : 0;
     serializationInterface->WriteRecordData(equipped_obj_id);
+    serializationInterface->WriteRecordData(fuel_id);
     if (LSM->is_burning) {
         LSM->UnPauseBurn();
         logger::info("Data Saved");
@@ -86,6 +90,8 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
     std::uint32_t version;
     std::uint32_t length;
     uint32_t equipped_obj_id;
+    uint32_t fuel_id;
+
     while (serializationInterface->GetNextRecordInfo(type, version, length)) {
         auto temp = Utilities::DecodeTypeCode(type);
 
@@ -100,8 +106,9 @@ void LoadCallback(SKSE::SerializationInterface* serializationInterface) {
                     logger::critical("Failed to Load Data");
                 }
                 serializationInterface->ReadRecordData(equipped_obj_id);
+                serializationInterface->ReadRecordData(fuel_id);
                 if (equipped_obj_id) {
-                    if (!LSM->SetSource(equipped_obj_id)) {
+                    if (!LSM->SetSource(equipped_obj_id,fuel_id)) { // burasi sakat olabilir
                         Utilities::MsgBoxesNotifs::InGame::LoadOrderError();
                     }
                 }

@@ -19,6 +19,23 @@ namespace Utilities {
     const auto init_err_msgbox = std::format("{}: The mod failed to initialize and will be terminated.", mod_name);
     const auto load_order_msgbox = std::format("The equipped light source from your save game could not be registered. Please unequip and reequip it. If you had fuel in it, it will be lost. This issue will be solved in the next version.");
 
+    
+    template <typename T>
+    std::string join(const T& container, const std::string_view& delimiter) {
+        std::ostringstream oss;
+        auto iter = container.begin();
+
+        if (iter != container.end()) {
+            oss << *iter;
+            ++iter;
+        }
+
+        for (; iter != container.end(); ++iter) {
+            oss << delimiter << *iter;
+        }
+
+        return oss.str();
+    }
 
     std::string DecodeTypeCode(std::uint32_t typeCode) {
         char buf[4];
@@ -162,12 +179,24 @@ namespace Utilities {
         std::mutex m_IntervalMutex;
     };
 
+
+    // Custom struct to represent the combined data
+    // butun RE::FormID'ler bununla takas edildi
+    struct FormID2 {
+        uint32_t outerKey;
+        uint32_t innerKey;
+
+        // Comparison operator for using Key as std::map key
+        bool operator<(const FormID2& other) const { return outerKey < other.outerKey || (outerKey == other.outerKey && innerKey < other.innerKey); }
+    };
+
+
     // https :  // github.com/ozooma10/OSLAroused/blob/29ac62f220fadc63c829f6933e04be429d4f96b0/src/PersistedData.cpp
     template <typename T>
     // BaseData is based off how powerof3's did it in Afterlife
     class BaseData {
     public:
-        float GetData(RE::FormID formId, T missing) {
+        float GetData(FormID2 formId, T missing) {
             Locker locker(m_Lock);
             if (auto idx = m_Data.find(formId) != m_Data.end()) {
                 return m_Data[formId];
@@ -175,7 +204,7 @@ namespace Utilities {
             return missing;
         }
 
-        void SetData(RE::FormID formId, T value) {
+        void SetData(FormID2 formId, T value) {
             Locker locker(m_Lock);
             m_Data[formId] = value;
         }
@@ -191,7 +220,7 @@ namespace Utilities {
         virtual void DumpToLog() = 0;
 
     protected:
-        std::map<RE::FormID, T> m_Data;
+        std::map<FormID2, T> m_Data;
 
         using Lock = std::recursive_mutex;
         using Locker = std::lock_guard<Lock>;
@@ -205,8 +234,9 @@ namespace Utilities {
         virtual void DumpToLog() override {
             Locker locker(m_Lock);
             for (const auto& [formId, value] : m_Data) {
-                logger::info("Dump Row From {} - FormID: {} - value: {}", GetType(), formId, value);
+                logger::info("Dump Row From {} - FormID1st: {} - FormID2nd: {} - value: {}", GetType(), formId.outerKey, formId.innerKey, value);
             }
+            // sakat olabilir
             logger::info("{} Rows Dumped For Type {}", m_Data.size(), GetType());
         }
     };
@@ -237,12 +267,12 @@ namespace Utilities {
 
         for (const auto& [formId, value] : m_Data) {
             if (!serializationInterface->WriteRecordData(formId)) {
-                logger::error("Failed to save data for FormID: ({:X})", formId);
+                logger::error("Failed to save data for FormID2: ({},{})", formId.outerKey, formId.innerKey);
                 return false;
             }
 
             if (!serializationInterface->WriteRecordData(value)) {
-                logger::error("Failed to save value data for form: {}", formId);
+                logger::error("Failed to save value data for form2: ({},{})", formId.outerKey, formId.innerKey);
                 return false;
             }
         }
@@ -259,15 +289,16 @@ namespace Utilities {
         Locker locker(m_Lock);
         m_Data.clear();
 
-        RE::FormID formId;
+        FormID2 formId;
         T value;
 
         for (auto i = 0; i < recordDataSize; i++) {
             serializationInterface->ReadRecordData(formId);
             // Ensure form still exists
-            RE::FormID fixedId;
-            if (!serializationInterface->ResolveFormID(formId, fixedId)) {
-                logger::error("Failed to resolve formID {} {}"sv, formId, fixedId);
+            //bunu nasil yapacagiz?
+            FormID2 fixedId;
+            if (!serializationInterface->ResolveFormID(formId.outerKey, fixedId.outerKey) || !serializationInterface->ResolveFormID(formId.innerKey, fixedId.innerKey)) {
+                logger::error("Failed to resolve formID1st {} {} and Failed to resolve formID2nd {} {}"sv, formId.outerKey, fixedId.outerKey, formId.innerKey, fixedId.innerKey);
                 continue;
             }
 

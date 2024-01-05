@@ -24,42 +24,74 @@ class LightSourceManager : public Utilities::Ticker, public Utilities::BaseFormF
 	};
 
 
-	void NoFuel(){
+	void NoFuel(){ // if no fuel left or didnt have fuel to begin with
 		auto plyr = RE::PlayerCharacter::GetSingleton();
         if (plyr) {
-			auto fuel_item = GetBoundFuelObject();
-            if (plyr->GetItemCount(fuel_item) > 0) {
-                if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::Refuel(GetName(), GetFuelName());
-                PauseBurn();
-                plyr->RemoveItem(fuel_item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr); // Refuel
-                current_source->remaining += current_source->duration; // Refuel
-                Start();
-			} else {
+            // yanarken fuel kalmadi. simdi elimde ayni source icin baska source-fuel kombinasyonlari var mi diye bakicam.
+            uint32_t current_source_formid = current_source->formid;
+            uint32_t current_fuel = current_source->fuel;
+            std::vector<std::string_view> fuel_list;
+            bool fuel_found = false;
+            for (auto& src : sources) {
+                if (src.formid == current_source_formid) {
+                    fuel_list.push_back(src.GetFuelName());
+                    auto fuel_item = src.GetBoundFuelObject();
+                    if (plyr->GetItemCount(fuel_item) > 0) {
+                        float to_be_transferred = PauseBurn();
+                        current_source->remaining = 0.f; // bekleme sirasinda fuellar arasindaki gecislerde remaining eksiye geciyo diye
+                        logger::info("Hi2");
+                        SetSource(src.formid, src.fuel);
+                        if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::Refuel(GetName(), GetFuelName());
+                        plyr->RemoveItem(fuel_item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);  // Refuel
+                        current_source->remaining += current_source->duration + to_be_transferred;          // Refuel
+                        Start();
+                        fuel_found = true;
+                        break;
+                    }
+				}
+			}
+            if (!fuel_found) {
+                SetSource(current_source_formid,current_fuel);
                 Stop(); // better safe than sorry?
-                if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::NoFuel(GetName(), GetFuelName());
+                if (Settings::enabled_plyrmsg) Utilities::MsgBoxesNotifs::InGame::NoFuel(GetName(), static_cast<std::string_view>(Utilities::join(fuel_list, " or ")));
                 // This has to be the last thing that happens in this function, which involves current_source because current_source is set to nullptr in the main thread
 				RE::ActorEquipManager::GetSingleton()->UnequipObject(plyr, GetBoundObject(),nullptr,1,nullptr,true,false,false);
 			}
         }
 	}
 
+
     float GetRemaining(Settings::LightSource* src) { return src->remaining - src->elapsed; };
     bool HasFuel(Settings::LightSource* src) { return GetRemaining(src) > 0.0001; };
+    bool SetSourceWithRemaningFuel(RE::FormID eqp_obj){
+    	for (auto& src : sources) {
+			if (eqp_obj == src.formid) {
+				if (HasFuel(&src)) {
+					current_source = &src;
+                    logger::info("Remainingli olan bi tane buldum: {} {}",src.remaining,current_source->remaining);
+					return true;
+				}
+			}
+		}
+		return false;
+    };
 
 
 
     void Init(){
         m_Data.clear();
         bool init_failed = false;
+        // sources direk butun sourcelari tutuyor ayni source with different fuel dahil.
         for (auto& src : sources) {
             if (!src.GetFormByID(src.formid, src.editorid) || !src.GetFormByID(src.fuel, src.fuel_editorid) || !src.GetBoundObject() || !src.GetBoundFuelObject() ) {
                 init_failed = true;
                 // continue so that the user can see all the errors
                 continue;
-            } 
+            }
             src.remaining = 0.f;
             src.elapsed = 0.f;
-            SetData(src.formid, src.remaining);
+
+            SetData({src.formid,src.fuel}, src.remaining);
             // check if forms are valid
         }
         if (init_failed) {
@@ -107,11 +139,12 @@ public:
 		Start();
 	};
 
-    void PauseBurn() {
+     float PauseBurn() {
         Stop();
         current_source->remaining -= current_source->elapsed;
         current_source->elapsed = 0.f;
         __restart = true;
+        return current_source->remaining; // sadece nofuel icinde kullanmak icin
     };
 
     void UnPauseBurn() {
@@ -139,7 +172,20 @@ public:
 		return eqp_obj == current_source->formid;
 	};
 
-	bool SetSource(RE::FormID eqp_obj) {
+	bool SetSource(RE::FormID eqp_obj, RE::FormID fuel_obj = 0) {
+        logger::info("{}",fuel_obj);
+        // fuel_obj dayatmasi varsa onu oncelikle
+        if (fuel_obj) {
+            for (auto& src : sources) {
+                if (eqp_obj == src.formid && fuel_obj == src.fuel) {
+                    current_source = &src;
+                    return true;
+                }
+            }
+        }
+        // yoksa remaining fuel olanlardan birini bul
+        if (SetSourceWithRemaningFuel(eqp_obj)) return true;
+        // yoksa ilk buldugunu al
         for (auto& src : sources) {
             if (eqp_obj == src.formid) {
                 current_source = &src;
@@ -159,18 +205,18 @@ public:
 
     void SendData() {
         for (auto& src : sources) {
-            SetData(src.formid, src.remaining);
+            SetData({src.formid, src.fuel}, src.remaining);
         }
     };
 
     void ReceiveData() {
         for (auto& src : sources) {
-            for (auto& pair : m_Data) {
-				if (pair.first == src.formid) {
-                    src.remaining = std::min(pair.second,src.duration);
-					break;
-				}
-			}
+            for (const auto& [formId2, value] : m_Data) {
+                if (formId2.outerKey == src.formid && formId2.innerKey == src.fuel) {
+                    src.remaining = std::min(value, src.duration);
+                    break;
+                }
+            }
         }
     };
 
